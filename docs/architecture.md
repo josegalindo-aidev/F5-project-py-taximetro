@@ -311,7 +311,7 @@ El proyecto se desarrolla con **TDD**: primero el test en rojo, luego el código
 | Versión | La versión vive solo en `pyproject.toml`. El criterio de versionado y el estado de las versiones publicadas se documentan únicamente en el [README](../README.md#versionado); no se repiten en ningún otro fichero. |
 | Documentación | `README.md` (entrada del repositorio: instalación, arranque y enlaces), `docs/usage.md` (manual de uso) y `docs/architecture.md` (este documento). El README resume y enlaza; el detalle vive en `docs/`. |
 | Commits | Conventional Commits (`feat`, `fix`, `test`, `refactor`, `docs`, `chore`) con referencia al issue (`Refs #n`) |
-| Ramas y PR | Una rama por funcionalidad; la PR cierra los issues con `Closes #n` |
+| Ramas y PR | Una rama de release por fase y una rama por funcionalidad; `main` solo avanza tras la demo. Reglas completas en [CONTRIBUTING.md](../CONTRIBUTING.md). |
 | Seguimiento | Tablero GitHub Projects «TTX-247 Taxímetro» (campos Fase, Tipo, MoSCoW, Estimate y Status) y backlog en `docs/project_backlog.xlsx` |
 | Estilo | `ruff` (líneas de hasta 100 caracteres) |
 
