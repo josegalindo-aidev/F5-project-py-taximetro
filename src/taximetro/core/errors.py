@@ -25,3 +25,7 @@ class TripAlreadyFinished(TaximetroError):
 
 class InvalidTimestamp(TaximetroError):
     """El instante recibido es anterior al último registrado."""
+
+
+class TariffFileError(TaximetroError):
+    """No se pudieron cargar las tarifas desde su fichero de configuración."""
