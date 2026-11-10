@@ -8,7 +8,6 @@ fuente: docs/architecture.md
 | | |
 |---|---|
 | **Proyecto** | py-taximetro (prototipo de TaxiTech Solutions S.L.) |
-| **Versión del documento** | 1.1 — 2026-11-10 |
 | **Alcance que refleja** | Fase 1 (MVP CLI): US-01 a US-04 y TK-02 |
 | **Fuente de verdad** | El código en `src/taximetro/`. Si algo de este documento y el código difieren, manda el código. |
 
@@ -309,7 +308,7 @@ El proyecto se desarrolla con **TDD**: primero el test en rojo, luego el código
 | Aspecto | Convención |
 |---|---|
 | Cabecera de cada fichero `.py` | Dos líneas al principio: `# Proyecto: py-taximetro` y `# fuente: <ruta desde la raíz>` (por ejemplo, `src/taximetro/core/trip.py`). Los ficheros vacíos, como los `__init__.py`, no la llevan. La regla se comprueba en `tests/test_conventions.py`. |
-| Versión | Solo en `pyproject.toml` (`version`). No se repite en los ficheros. |
+| Versión | La versión vive solo en `pyproject.toml`. El criterio de versionado y el estado de las versiones publicadas se documentan únicamente en el [README](../README.md#versionado); no se repiten en ningún otro fichero. |
 | Documentación | `README.md` (entrada del repositorio: instalación, arranque y enlaces), `docs/usage.md` (manual de uso) y `docs/architecture.md` (este documento). El README resume y enlaza; el detalle vive en `docs/`. |
 | Commits | Conventional Commits (`feat`, `fix`, `test`, `refactor`, `docs`, `chore`) con referencia al issue (`Refs #n`) |
 | Ramas y PR | Una rama por funcionalidad; la PR cierra los issues con `Closes #n` |
@@ -365,11 +364,3 @@ python -m ruff check src tests
 | L6 | `TripRepository` está definido pero sin implementar ni usar. | Fase 2. |
 | L7 | El módulo `taximetro.core.ports` importa `Trip`, lo que acopla el contrato al modelo. Es aceptable mientras `Trip` sea el único agregado. | Revisar si el modelo crece. |
 
----
-
-## 11. Registro de cambios del documento
-
-| Versión | Fecha | Cambio |
-|---|---|---|
-| 1.0 | 2026-11-10 | Versión inicial alineada con el código de la Fase 1 (US-01 a US-04 y TK-02). |
-| 1.1 | 2026-11-10 | Convención de cabecera (Proyecto y fuente con ruta, sin versión), nuevo nivel de pruebas de convenciones, total de 82 pruebas y referencia a `README.md` y `docs/usage.md`. |

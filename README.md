@@ -114,6 +114,25 @@ El programa **no tiene dependencias externas en ejecución**: usa solo la biblio
 
 Las fases siguientes incorporarán `sqlalchemy` (base de datos) y `fastapi` con `uvicorn` (API), declaradas como extras opcionales (`[sql]` y `[api]`). Esta sección se ampliará con su justificación cuando se usen.
 
+## Versionado
+
+Se sigue el [versionado semántico](https://semver.org/lang/es/) (`MAJOR.MINOR.PATCH`). La versión vive **solo** en `pyproject.toml`, y el estado de las versiones publicadas, **solo** en esta sección: no se repite en ningún otro fichero.
+
+| Número | Significado | Cuándo sube |
+|---|---|---|
+| `MAJOR` | Cambios incompatibles. Con `0` el proyecto está en desarrollo inicial y la interfaz puede cambiar. | Al llegar a producción (`1.0.0`) |
+| `MINOR` | Funcionalidad nueva compatible | Al cerrar cada fase |
+| `PATCH` | Corrección de errores | Cuando haga falta, sin esperar a una fase |
+
+| Fase | Versión | Estado |
+|---|---|---|
+| 1 · MVP CLI | `0.1.0` | ✅ [Publicada](https://github.com/josegalindo-aidev/F5-project-py-taximetro/releases/tag/v0.1.0) |
+| 2 · Observabilidad y persistencia | `0.2.0` | ⏳ Planificada |
+| 3 · Arquitectura y UI | `0.3.0` | ⏳ Planificada |
+| 4 · Producción | `1.0.0` | ⏳ Planificada |
+
+Al cerrar una fase se sube `version` en `pyproject.toml` dentro de su PR y se crea la etiqueta `vX.Y.Z` con su release en GitHub.
+
 ## Metodología
 
 - **TDD**: primero el test en rojo, luego el código mínimo y después el refactor.
