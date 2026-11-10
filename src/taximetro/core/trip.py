@@ -1,3 +1,5 @@
+# Proyecto: py-taximetro
+# fuente: src/taximetro/core/trip.py
 """Carrera: acumula el importe por tramos según el estado del taxi.
 
 Decisión de diseño: `Trip` NO conoce ningún reloj. Recibe el instante (`at`, en

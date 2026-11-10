@@ -1,3 +1,5 @@
+# Proyecto: py-taximetro
+# fuente: tests/unit/core/test_tariff.py
 from decimal import Decimal
 
 import pytest
@@ -14,7 +16,7 @@ def test_parado_cuesta_002_por_segundo(tariff):
 def test_en_movimiento_cuesta_005_por_segundo(tariff):
     assert tariff.rate_for(State.MOVING) == Decimal("0.05")
 
-
+# Verificación de dos casos: stopped, moving.
 @pytest.mark.parametrize(
     ("stopped", "moving"),
     [(Decimal("-0.01"), Decimal("0.05")), (Decimal("0.02"), Decimal("-1"))],

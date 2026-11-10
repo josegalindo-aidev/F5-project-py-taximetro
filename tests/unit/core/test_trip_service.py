@@ -1,3 +1,5 @@
+# Proyecto: py-taximetro
+# fuente: tests/unit/core/test_trip_service.py
 from decimal import Decimal
 
 import pytest

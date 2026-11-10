@@ -1,3 +1,5 @@
+# Proyecto: py-taximetro
+# fuente: src/taximetro/ui/cli/format.py
 """Formato de importes para la consola."""
 
 from decimal import ROUND_HALF_UP, Decimal

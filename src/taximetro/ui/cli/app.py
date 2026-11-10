@@ -1,3 +1,5 @@
+# Proyecto: py-taximetro
+# fuente: src/taximetro/ui/cli/app.py
 """Interfaz de línea de comandos del taxímetro (Fase 1 - MVP)."""
 
 from __future__ import annotations

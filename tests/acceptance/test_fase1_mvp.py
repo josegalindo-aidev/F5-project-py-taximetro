@@ -1,3 +1,5 @@
+# Proyecto: py-taximetro
+# fuente: tests/acceptance/test_fase1_mvp.py
 """Aceptación de la Fase 1 (MVP CLI): US-01 a US-04, de principio a fin por la consola."""
 
 import pytest

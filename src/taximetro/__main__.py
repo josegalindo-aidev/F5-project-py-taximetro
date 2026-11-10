@@ -1,3 +1,5 @@
+# Proyecto: py-taximetro
+# fuente: src/taximetro/__main__.py
 """Punto de arranque: conecta las piezas y lanza la CLI (`python -m taximetro`)."""
 
 import time

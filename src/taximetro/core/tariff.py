@@ -1,3 +1,5 @@
+# Proyecto: py-taximetro
+# fuente: src/taximetro/core/tariff.py
 """Tarifas: precio por segundo según el estado del taxi."""
 
 from __future__ import annotations

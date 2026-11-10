@@ -1,3 +1,5 @@
+# Proyecto: py-taximetro
+# fuente: src/taximetro/core/errors.py
 """Errores del dominio."""
 
 

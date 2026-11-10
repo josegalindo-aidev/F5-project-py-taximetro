@@ -1,3 +1,5 @@
+# Proyecto: py-taximetro
+# fuente: src/taximetro/core/trip_service.py
 """Caso de uso: gestiona la carrera activa y permite encadenar carreras (US-04)."""
 
 from __future__ import annotations

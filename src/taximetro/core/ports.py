@@ -1,3 +1,5 @@
+# Proyecto: py-taximetro
+# fuente: src/taximetro/core/ports.py
 """Puertos: solo los que tienen más de una implementación real."""
 
 from __future__ import annotations
