@@ -46,6 +46,28 @@ def test_total_se_redondea_a_dos_decimales(trip):
     assert trip.finish(at=0.5) == Decimal("0.01")  # 0.5 * 0.02 = 0.01
 
 
+# Importe provisional (para mostrar el importe acumulado sin cerrar la carrera)
+def test_importe_provisional_no_cierra_la_carrera(trip):
+    trip.start(at=0)
+    trip.change_state(State.MOVING, at=10)
+    assert trip.amount_at(20) == Decimal("0.70")
+    assert trip.amount_at(20) == Decimal("0.70")  # idempotente
+    assert trip.finish(at=30) == Decimal("1.20")
+
+
+def test_importe_provisional_sin_iniciar_falla(trip):
+    with pytest.raises(TripNotStarted):
+        trip.amount_at(1)
+
+
+def test_estado_actual(trip):
+    assert trip.state is None
+    trip.start(at=0)
+    assert trip.state is State.STOPPED
+    trip.change_state(State.MOVING, at=1)
+    assert trip.state is State.MOVING
+
+
 # Casos límite
 def test_finalizar_sin_iniciar_falla(trip):
     with pytest.raises(TripNotStarted):
