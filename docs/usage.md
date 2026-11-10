@@ -5,7 +5,7 @@ fuente: docs/usage.md
 
 # Manual de uso del taxímetro
 
-Guía para usar el taxímetro desde la línea de comandos (Fase 1 · MVP). Para instalarlo y arrancarlo, consulta el [README](../README.md).
+Guía para usar y configurar el taxímetro desde la línea de comandos. Para instalarlo y arrancarlo, consulta el [README](../README.md).
 
 ## 1. Conceptos básicos
 
@@ -18,7 +18,7 @@ Guía para usar el taxímetro desde la línea de comandos (Fase 1 · MVP). Para 
 
 ### Tarifas
 
-Zona EMT Madrid (junio 2025):
+Las tarifas se leen del fichero `config/rates.toml` al arrancar (ver el apartado 7). Las que se entregan son las de la Zona EMT Madrid (junio 2025):
 
 | Estado | Precio |
 |---|---|
@@ -90,7 +90,7 @@ Tras `finalizar` no hace falta cerrar el programa: puedes escribir `iniciar` par
 | `Comando desconocido: 'xxx'. Escribe 'ayuda'.` | El comando no existe | Escribe `ayuda` para ver la lista |
 | `Aviso: La carrera en curso no se ha cobrado.` | Has salido del programa sin finalizar la carrera | Vuelve a abrirlo; esa carrera no se recupera |
 
-Los errores **no cierran el programa**: puedes seguir escribiendo comandos.
+Los errores **no cierran el programa**: puedes seguir escribiendo comandos. Los errores del fichero de tarifas son distintos: ocurren al arrancar y se explican en el apartado 7.
 
 ## 6. Cerrar el programa
 
@@ -99,20 +99,80 @@ Los errores **no cierran el programa**: puedes seguir escribiendo comandos.
 
 Si hay una carrera sin finalizar, el programa te avisa de que no se ha cobrado.
 
-## 7. Limitaciones actuales
+## 7. Configurar las tarifas
+
+Las tarifas están en un fichero de texto y se leen **una sola vez, al arrancar**. Para cambiarlas, edita el fichero y vuelve a abrir el programa.
+
+### El fichero
+
+Por defecto es `config/rates.toml`, en la raíz del proyecto:
+
+```toml
+[rates]
+stopped = "0.02"   # parado, en euros por segundo
+moving = "0.05"    # en movimiento, en euros por segundo
+```
+
+| Regla | Correcto | Incorrecto |
+|---|---|---|
+| Los valores van **entre comillas** | `"0.02"` | `0.02` |
+| Punto decimal, no coma | `"0.05"` | `"0,05"` |
+| Número finito y no negativo (el cero se admite) | `"0.02"`, `"0"` | `"-0.02"`, `"NaN"`, `"Infinity"` |
+| Las dos claves y la tabla `[rates]` son obligatorias | `[rates]` con `stopped` y `moving` | falta alguna |
+| El fichero se guarda en UTF-8 | | |
+
+Las comillas son necesarias porque un número sin comillas se lee como decimal binario y arrastra un pequeño error de redondeo; como texto, el valor es exacto.
+
+### Usar otro fichero
+
+La variable de entorno `TAXIMETRO_RATES` indica otra ruta. En Git Bash:
+
+```bash
+TAXIMETRO_RATES=otras_tarifas.toml python -m taximetro
+```
+
+En PowerShell:
+
+```powershell
+$env:TAXIMETRO_RATES = "otras_tarifas.toml"; python -m taximetro
+```
+
+Una ruta relativa se interpreta desde la carpeta en la que ejecutas el programa. Si la variable está vacía, se ignora y se usa el fichero por defecto.
+
+### Si el fichero tiene errores
+
+El programa **no arranca**: no usa ninguna tarifa por defecto, porque cobrar con una tarifa equivocada es peor que no cobrar. Muestra un mensaje que empieza por `Error:` y termina con **código de salida 1**.
+
+| Mensaje | Causa | Qué hacer |
+|---|---|---|
+| `No se encuentra el fichero de tarifas: <ruta>` | La ruta es incorrecta o el fichero no existe | Revisa la ruta o la variable `TAXIMETRO_RATES` |
+| `No se puede leer el fichero de tarifas (…): <ruta>` | La ruta es una carpeta, o no hay permiso de lectura | Indica un fichero y revisa sus permisos |
+| `El fichero de tarifas debe estar guardado en UTF-8 (…)` | Otra codificación, por ejemplo ANSI | Guárdalo como UTF-8 |
+| `El fichero de tarifas tiene errores de sintaxis (…)` | Falta un corchete o una comilla | Corrige la línea y la columna que indica el mensaje |
+| `Falta la sección [rates] en <ruta>` | No existe la tabla `[rates]` | Añade `[rates]` |
+| `[rates] debe ser una tabla, no un valor suelto` | Se escribió `rates = 5` | Usa la sección `[rates]` |
+| `Falta la clave 'moving' en [rates] de <ruta>` | Falta `stopped` o `moving` | Añade la clave que falta |
+| `El valor de 'stopped' debe escribirse entre comillas: 0.02 (<ruta>)` | Número sin comillas | Escríbelo entre comillas |
+| `El valor de 'stopped' no es un número: 'abc' (<ruta>)` | Texto, o coma decimal | Usa un número con punto decimal |
+| `El valor de 'stopped' no es un número finito: 'NaN' (<ruta>)` | `NaN` o `Infinity` | Usa un número normal |
+| `El valor de 'stopped' no puede ser negativo: '-0.02' (<ruta>)` | Valor negativo | Usa un valor mayor o igual que cero |
+
+## 8. Limitaciones actuales
 
 | Limitación | Detalle |
 |---|---|
 | Sin historial | Al cerrar el programa se pierde todo; no hay histórico del día todavía (Fase 2). |
-| Tarifas fijas | Los precios están en el código; en la Fase 2 se leerán de `config/rates.toml`. |
+| Tarifas leídas al arrancar | Si editas el fichero con el programa abierto, el cambio no se aplica hasta volver a abrirlo. |
 | Estado indicado a mano | El taxi solo puede estar parado o en movimiento, y el estado lo indicas tú con `parar` y `mover`. El programa no mide la velocidad, así que no aplica por sí mismo la regla de «menos de 20 km/h». |
 | Una carrera a la vez | Solo hay una carrera activa en cada momento. |
 
-## 8. Qué llegará en las siguientes fases
+## 9. Qué llegará en las siguientes fases
+
+Las tarifas configurables, que estaban previstas para la Fase 2, ya están disponibles (apartado 7).
 
 | Fase | Novedades para el usuario |
 |---|---|
-| 2 | Histórico del día, registro de operaciones y tarifas configurables |
+| 2 | Histórico del día y registro de operaciones |
 | 3 | Acceso con contraseña e interfaz gráfica con botones grandes para tablet |
 | 4 | API REST, panel web para el responsable de flota y despliegue con un único comando |
 

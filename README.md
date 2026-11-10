@@ -14,7 +14,7 @@ Proyecto del bootcamp de Factoría F5, desarrollado con **TDD** y una arquitectu
 | Fase | Contenido | Estado |
 |---|---|---|
 | **1 · MVP CLI** | Iniciar, cambiar de estado y finalizar carreras desde la consola; encadenar carreras | ✅ Implementada |
-| 2 · Observabilidad y persistencia | Logs, historial en disco, tarifas en fichero, histórico del día | ⏳ Planificada |
+| 2 · Observabilidad y persistencia | Logs, historial en disco, histórico del día y tarifas en fichero (ya hecho) | En desarrollo |
 | 3 · Arquitectura y UI | Acceso con contraseña e interfaz gráfica para tablet | ⏳ Planificada |
 | 4 · Producción | Base de datos, API REST, panel web y despliegue con un comando | ⏳ Planificada |
 
@@ -63,9 +63,9 @@ El programa muestra las instrucciones al arrancar y espera comandos:
 | `ayuda` | Repite las instrucciones |
 | `salir` | Cierra el programa |
 
-Tarifas (Zona EMT Madrid, junio 2025): **0,02 €/s** parado (o a menos de 20 km/h) y **0,05 €/s** en movimiento. El estado lo indicas tú con `parar` y `mover`.
+Tarifas (Zona EMT Madrid, junio 2025): **0,02 €/s** parado (o a menos de 20 km/h) y **0,05 €/s** en movimiento. El estado lo indicas tú con `parar` y `mover`. Las tarifas se leen de `config/rates.toml` al arrancar, así que se pueden cambiar sin tocar el código.
 
-Manual completo, con ejemplos y mensajes de error: [docs/usage.md](docs/usage.md).
+Manual completo, con ejemplos, cómo configurar las tarifas y mensajes de error: [docs/usage.md](docs/usage.md).
 
 ## Pruebas y calidad
 
@@ -87,11 +87,11 @@ python -m ruff check src tests
 src/taximetro/
 ├── core/      Reglas de negocio puras: Tariff, Trip, TripService, errores y puertos
 ├── ui/cli/    Interfaz de línea de comandos
-├── infra/     Adaptadores externos (reservado para las fases 2 a 4)
+├── infra/     Adaptadores externos: carga de tarifas (repositorios en las fases 2 a 4)
 └── __main__.py  Punto de arranque
 tests/         Pruebas unitarias, de aceptación y de convenciones
 docs/          Documentación y backlog
-config/        Tarifas (rates.toml; se leerán en la Fase 2)
+config/        Tarifas (rates.toml)
 ```
 
 ## Documentación
