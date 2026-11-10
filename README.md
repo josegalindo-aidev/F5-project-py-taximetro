@@ -135,7 +135,7 @@ Al cerrar una fase se sube `version` en `pyproject.toml` dentro de su PR y se cr
 
 ## Flujo de trabajo
 
-Cada fase se desarrolla en una rama `release/X.Y.Z`, con una rama por funcionalidad que se integra en ella. `main` solo avanza cuando la demo de la fase la valida. Ramas, PR, cierre de issues y promoción de releases: [CONTRIBUTING.md](CONTRIBUTING.md).
+Cada fase se desarrolla en una rama `release/X.Y.Z`, con una rama por funcionalidad que se integra en ella. `main` solo avanza cuando la demo de la fase la valida. **Todo cambio entra por PR**: no hay `push` directo a `main` ni a las ramas de release. Ramas, PR, cierre de issues, promoción de releases y limitaciones: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Metodología
 

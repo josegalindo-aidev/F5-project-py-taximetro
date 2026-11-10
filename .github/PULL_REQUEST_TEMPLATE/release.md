@@ -17,7 +17,7 @@ Closes #
 - [ ] `pytest` pasa y `ruff` sin avisos
 - [ ] Versión subida en `pyproject.toml` y tabla de versiones del README actualizada
 - [ ] Demo en directo realizada desde la rama de release
-- [ ] Se fusiona con **"Create a merge commit"** (o fast-forward), no con rebase
+- [ ] Se fusiona con **"Create a merge commit"**: es el único método que admite `main`
 
 ## Después de fusionar
 
