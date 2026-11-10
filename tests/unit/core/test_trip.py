@@ -92,6 +92,15 @@ def test_no_se_puede_operar_tras_finalizar(trip):
         trip.change_state(State.MOVING, at=2)
 
 
+def test_una_carrera_finalizada_no_se_reinicia(trip):
+    trip.start(at=0)
+    assert not trip.is_finished
+    trip.finish(at=1)
+    assert trip.is_finished
+    with pytest.raises(TripAlreadyFinished):
+        trip.start(at=2)
+
+
 def test_instante_anterior_al_ultimo_es_invalido(trip):
     trip.start(at=10)
     with pytest.raises(InvalidTimestamp):

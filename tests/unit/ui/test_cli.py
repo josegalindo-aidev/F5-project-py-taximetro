@@ -1,0 +1,96 @@
+from decimal import Decimal
+
+import pytest
+
+from taximetro.core.trip_service import TripService
+from taximetro.ui.cli.app import Cli
+from taximetro.ui.cli.format import format_euros
+from tests.fakes import FakeClock, ScriptedInput
+
+
+@pytest.fixture
+def clock() -> FakeClock:
+    return FakeClock()
+
+
+def run_cli(tariff, clock, steps) -> str:
+    """Ejecuta la CLI con una consola simulada y devuelve todo lo impreso."""
+    out: list[str] = []
+    service = TripService(tariff, clock)
+    Cli(service, input_fn=ScriptedInput(clock, steps), output_fn=out.append).run()
+    return "\n".join(out)
+
+
+@pytest.mark.parametrize(
+    ("amount", "text"),
+    [
+        (Decimal("0"), "0,00 €"),
+        (Decimal("0.7"), "0,70 €"),
+        (Decimal("12.345"), "12,35 €"),
+        (Decimal("1234.5"), "1234,50 €"),
+    ],
+)
+def test_format_euros(amount, text):
+    assert format_euros(amount) == text
+
+
+# TK-02: instrucciones de uso al arrancar
+def test_muestra_instrucciones_al_arrancar(tariff, clock):
+    out = run_cli(tariff, clock, [])
+    for command in ("iniciar", "parar", "mover", "estado", "finalizar", "ayuda", "salir"):
+        assert command in out
+
+
+def test_ayuda_repite_las_instrucciones(tariff, clock):
+    out = run_cli(tariff, clock, [(0, "ayuda")])
+    assert out.count("finalizar") >= 2
+
+
+def test_comando_desconocido(tariff, clock):
+    out = run_cli(tariff, clock, [(0, "volar")])
+    assert "Comando desconocido" in out
+
+
+def test_ignora_lineas_vacias_y_mayusculas(tariff, clock):
+    out = run_cli(tariff, clock, [(0, ""), (0, "  INICIAR  "), (0, "salir")])
+    assert "Carrera iniciada" in out
+    assert "Comando desconocido" not in out
+
+
+def test_estado_sin_carrera(tariff, clock):
+    out = run_cli(tariff, clock, [(0, "estado")])
+    assert "No hay ninguna carrera en curso" in out
+
+
+def test_estado_con_carrera_muestra_estado_e_importe(tariff, clock):
+    out = run_cli(tariff, clock, [(0, "iniciar"), (10, "estado"), (0, "mover"), (10, "estado")])
+    assert "parado" in out and "Importe actual: 0,20 €" in out
+    assert "en movimiento" in out and "Importe actual: 0,70 €" in out
+
+
+# Errores amigables: la CLI no se cae
+def test_finalizar_sin_carrera_no_rompe(tariff, clock):
+    out = run_cli(tariff, clock, [(0, "finalizar"), (0, "iniciar")])
+    assert "No hay ninguna carrera en curso" in out
+    assert "Carrera iniciada" in out  # sigue funcionando después del error
+
+
+def test_iniciar_dos_veces_avisa(tariff, clock):
+    out = run_cli(tariff, clock, [(0, "iniciar"), (0, "iniciar")])
+    assert "Ya hay una carrera en curso" in out
+
+
+def test_salir_termina_el_bucle(tariff, clock):
+    out = run_cli(tariff, clock, [(0, "salir"), (0, "iniciar")])
+    assert "Hasta pronto" in out
+    assert "Carrera iniciada" not in out  # no procesó nada tras salir
+
+
+def test_fin_de_entrada_termina_sin_error(tariff, clock):
+    out = run_cli(tariff, clock, [(0, "iniciar")])  # luego EOFError
+    assert "Hasta pronto" in out
+
+
+def test_salir_con_carrera_en_curso_avisa(tariff, clock):
+    out = run_cli(tariff, clock, [(0, "iniciar"), (0, "salir")])
+    assert "La carrera en curso no se ha cobrado" in out
