@@ -133,6 +133,10 @@ Se sigue el [versionado semántico](https://semver.org/lang/es/) (`MAJOR.MINOR.P
 
 Al cerrar una fase se sube `version` en `pyproject.toml` dentro de su PR y se crea la etiqueta `vX.Y.Z` con su release en GitHub.
 
+## Flujo de trabajo
+
+Cada fase se desarrolla en una rama `release/X.Y.Z`, con una rama por funcionalidad que se integra en ella. `main` solo avanza cuando la demo de la fase la valida. **Todo cambio entra por PR**: no hay `push` directo a `main` ni a las ramas de release. Ramas, PR, cierre de issues, promoción de releases y limitaciones: [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Metodología
 
 - **TDD**: primero el test en rojo, luego el código mínimo y después el refactor.
