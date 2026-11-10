@@ -1,0 +1,31 @@
+name: Historia de usuario
+description: Nueva historia de usuario (US) del backlog
+title: "US-XX: "
+labels: ["historia"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Después de crear el issue, en el proyecto rellena **Tipo = Historia**, **Fase** y **MoSCoW**.
+  - type: textarea
+    id: historia
+    attributes:
+      label: Historia
+      description: Formato "Como ..., quiero ... para ...".
+      placeholder: "Como taxista, quiero iniciar una carrera con un comando para empezar a cobrar."
+    validations:
+      required: true
+  - type: textarea
+    id: criterios
+    attributes:
+      label: Criterios de aceptación
+      value: |
+        - [ ]
+        - [ ]
+    validations:
+      required: true
+  - type: input
+    id: test
+    attributes:
+      label: Test asociado
+      placeholder: "tests/unit/core/test_trip.py::test_..."

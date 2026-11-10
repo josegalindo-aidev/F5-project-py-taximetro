@@ -1,0 +1,30 @@
+name: Tarea técnica
+description: Tarea técnica (TK) que no es una historia de usuario
+title: "TK-XX: "
+labels: ["tarea-tecnica"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Después de crear el issue, en el proyecto rellena **Tipo = Tarea Técnica**, **Fase** y **MoSCoW**.
+  - type: textarea
+    id: descripcion
+    attributes:
+      label: Descripción
+      placeholder: "Qué hay que hacer y por qué."
+    validations:
+      required: true
+  - type: textarea
+    id: criterios
+    attributes:
+      label: Criterios de aceptación
+      value: |
+        - [ ]
+        - [ ]
+    validations:
+      required: true
+  - type: input
+    id: test
+    attributes:
+      label: Test asociado
+      placeholder: "tests/... o comando de verificación"
