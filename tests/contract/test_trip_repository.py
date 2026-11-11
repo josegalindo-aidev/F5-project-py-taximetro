@@ -9,13 +9,16 @@ import pytest
 
 from taximetro.core.errors import InvalidTripRecord
 from taximetro.core.trip import Trip
+from taximetro.infra.repos.json_file import JsonTripRepository
 from taximetro.infra.repos.memory import InMemoryTripRepository
 
 
-@pytest.fixture(params=["memory"])
-def repository(request):
+@pytest.fixture(params=["memory", "json"])
+def repository(request, tmp_path):
     if request.param == "memory":
         return InMemoryTripRepository()
+    if request.param == "json":
+        return JsonTripRepository(tmp_path / "trips.json")
     raise AssertionError(request.param)
 
 
