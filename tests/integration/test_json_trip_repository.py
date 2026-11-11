@@ -5,6 +5,7 @@
 import json
 from datetime import UTC, date, datetime
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 
@@ -32,9 +33,9 @@ def without(field: str) -> dict:
     return {k: v for k, v in record().items() if k != field}
 
 
-def finished_trip() -> Trip:
+def finished_trip(trip_id: str = "nueva") -> Trip:
     return Trip.restore(
-        "nueva",
+        trip_id,
         datetime(2026, 11, 11, 11, 0, tzinfo=UTC),
         datetime(2026, 11, 11, 11, 5, tzinfo=UTC),
         Decimal("30"),
@@ -99,3 +100,26 @@ def test_sin_fichero_el_historial_esta_vacio_y_listar_no_lo_crea(tmp_path):
 
     assert JsonTripRepository(path).list_finished(DAY) == []
     assert not path.parent.exists()
+
+
+# Escritura atómica: un fallo a mitad de escritura no puede destruir el historial anterior.
+def test_si_falla_la_escritura_a_medias_el_historial_anterior_sigue_intacto(path, monkeypatch):
+    repository = JsonTripRepository(path)
+    repository.save(finished_trip("primera"))
+    antes = path.read_text(encoding="utf-8")
+
+    escribir = Path.write_text
+
+    def escribe_la_mitad_y_falla(self, text, *args, **kwargs):
+        escribir(self, text[: len(text) // 2], *args, **kwargs)
+        raise OSError("disco lleno")
+
+    monkeypatch.setattr(Path, "write_text", escribe_la_mitad_y_falla)
+
+    with pytest.raises(OSError, match="disco lleno"):
+        repository.save(finished_trip("segunda"))
+
+    monkeypatch.undo()
+    assert path.read_text(encoding="utf-8") == antes  # el fichero no se tocó
+    assert [t.id for t in repository.list_finished(DAY)] == ["primera"]
+    assert list(path.parent.iterdir()) == [path]  # sin ficheros temporales sueltos
