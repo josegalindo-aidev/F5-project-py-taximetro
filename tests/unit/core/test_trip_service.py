@@ -7,6 +7,7 @@ import pytest
 from taximetro.core.errors import (
     InvalidTripRecord,
     TripAlreadyStarted,
+    TripHistoryError,
     TripNotSaved,
     TripNotStarted,
 )
@@ -140,6 +141,30 @@ def test_si_falla_el_guardado_la_carrera_se_cobra_y_el_error_lleva_el_total(
     assert info.value.total == Decimal("0.20")
     assert isinstance(info.value.__cause__, OSError)
     assert service.active is None  # la carrera queda cerrada: se puede iniciar otra
+
+
+class DamagedHistoryRepository:
+    """Repositorio cuyo historial está dañado: no se puede añadir la carrera."""
+
+    def save(self, trip):
+        raise TripHistoryError("El historial 'trips.json' está dañado")
+
+    def list_finished(self, day):
+        return []
+
+
+def test_si_el_historial_esta_danado_la_carrera_se_cobra_y_se_avisa(tariff, clock, wall_clock):
+    service = TripService(tariff, clock, wall_clock, DamagedHistoryRepository())
+    service.start()
+    clock.advance(10)
+
+    with pytest.raises(TripNotSaved) as info:
+        service.finish()
+
+    assert info.value.total == Decimal("0.20")
+    assert isinstance(info.value.__cause__, TripHistoryError)
+    assert "dañado" in str(info.value)  # el aviso incluye el motivo
+    assert service.active is None
 
 
 class BuggyRepository:
