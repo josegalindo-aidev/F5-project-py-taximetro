@@ -16,12 +16,12 @@ def clock() -> FakeClock:
     return FakeClock()
 
 
-def run_cli(tariff, clock, steps, repository=None) -> str:
+def run_cli(tariff, clock, steps, repository=None, notes=()) -> str:
     """Ejecuta la CLI con una consola simulada y devuelve todo lo impreso."""
     out: list[str] = []
     repository = repository if repository is not None else InMemoryTripRepository()
     service = TripService(tariff, clock, FakeWallClock(), repository)
-    Cli(service, input_fn=ScriptedInput(clock, steps), output_fn=out.append).run()
+    Cli(service, ScriptedInput(clock, steps), out.append, notes).run()
     return "\n".join(out)
 
 
@@ -109,3 +109,17 @@ def test_si_falla_el_guardado_se_muestra_el_total_y_un_aviso(tariff, clock):
     assert "Carrera finalizada. Total: 0,20 €" in out
     assert "Aviso: No se pudo guardar la carrera en el historial: disco lleno" in out
     assert out.index("Total") < out.index("Aviso")  # primero el importe
+
+
+# TK-04: al arrancar se informa de dónde se guarda el historial
+def test_al_arrancar_muestra_las_notas_entre_el_titulo_y_las_instrucciones(tariff, clock):
+    out = run_cli(tariff, clock, [], notes=["Historial: /datos/trips.json"])
+
+    assert out.index("Taxímetro digital") < out.index("Historial: /datos/trips.json")
+    assert out.index("Historial: /datos/trips.json") < out.index("Comandos disponibles")
+
+
+def test_sin_notas_no_se_imprime_nada_extra(tariff, clock):
+    out = run_cli(tariff, clock, [])
+
+    assert "Historial" not in out

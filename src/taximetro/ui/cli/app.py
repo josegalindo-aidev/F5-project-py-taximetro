@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 
 from taximetro.core.errors import (
     InvalidTimestamp,
@@ -43,6 +43,7 @@ class Cli:
         service: TripService,
         input_fn: Callable[[str], str] = input,
         output_fn: Callable[[str], None] = print,
+        notes: Sequence[str] = (),
     ) -> None:
         self._service = service
         self._input = input_fn
