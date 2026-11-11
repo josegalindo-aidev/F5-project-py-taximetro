@@ -34,6 +34,7 @@ class JsonTripRepository:
         return sorted(of_day, key=lambda trip: trip.finished_at)
 
     def _read(self) -> list[dict]:
+        self._check_folder()
         if not self._path.exists():
             return []
         try:
@@ -47,6 +48,16 @@ class JsonTripRepository:
         if not isinstance(records, list):
             raise self._damaged("se esperaba una lista de carreras")
         return records
+
+    def _check_folder(self) -> None:
+        """La carpeta de datos, o la primera que exista por encima, debe ser una carpeta."""
+        for folder in self._path.parents:
+            if folder.exists():
+                if not folder.is_dir():
+                    raise TripHistoryError(
+                        f"La carpeta de datos '{folder}' no es una carpeta: es un fichero."
+                    )
+                return
 
     def _write(self, records: list[dict]) -> None:
         """Escribe en un temporal y lo intercambia: el fichero nunca queda a medias."""
