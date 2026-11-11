@@ -203,6 +203,7 @@ Las fechas se guardan en ISO 8601 con zona horaria y los importes y segundos **c
 | **Escritura atómica** | `save` escribe en un fichero temporal en la misma carpeta y lo intercambia con `os.replace`. Un corte a mitad de escritura deja el historial anterior intacto; si algo falla, se borra el temporal |
 | **Historial dañado** | Un fichero vacío, que no es JSON, que no es una lista o con un registro ilegible lanza `TripHistoryError` con la ruta y el motivo. `save` valida **antes** de escribir, así que un fichero dañado nunca se sobrescribe |
 | **Historial ilegible** | Un fichero que existe pero no se puede leer (permisos, es una carpeta) también lanza `TripHistoryError` |
+| **Carpeta de datos inválida** | Si la carpeta de datos, o la primera que exista por encima, es un fichero, lanza `TripHistoryError` nombrándola. Un primer arranque, con las carpetas aún sin crear, sigue siendo válido |
 | **Primer arranque** | Si el fichero no existe, el historial está vacío. Listar nunca crea nada; guardar crea las carpetas que falten |
 | **Qué carreras lista** | `list_finished(día)` devuelve las que **terminan** ese día, de la más antigua a la más reciente por hora de fin |
 
@@ -367,7 +368,7 @@ Los errores de negocio son excepciones del dominio. `Cli._dispatch` las captura 
 | `InvalidTimestamp` | Instante anterior al último registrado | "El reloj retrocedió; no se puede continuar la carrera." |
 | `InvalidTariff` | Construir una `Tariff` con valores negativos | No llega a la CLI: el cargador valida antes los valores del fichero |
 | `TariffFileError` | El fichero de tarifas falta, no se puede leer, está mal formado o tiene valores inválidos | No llega a la CLI: al arrancar se imprime `Error: …` por `stderr` y el código de salida es 1 |
-| `TripHistoryError` | El historial está dañado (no es JSON, no es una lista, un registro ilegible) o existe pero no se puede leer | **Al arrancar**: `Error: …` por `stderr` y código de salida 1. **Al finalizar una carrera**: `TripService` lo convierte en `TripNotSaved` |
+| `TripHistoryError` | El historial está dañado (no es JSON, no es una lista, un registro ilegible), existe pero no se puede leer, o la carpeta de datos es en realidad un fichero | **Al arrancar**: `Error: …` por `stderr` y código de salida 1. **Al finalizar una carrera**: `TripService` lo convierte en `TripNotSaved` |
 | `TripNotSaved` | La carrera se cobró, pero no se pudo guardar (`OSError` o `TripHistoryError`) | La CLI muestra `Carrera finalizada. Total: …` y después `Aviso: No se pudo guardar la carrera en el historial: …` |
 | `InvalidTripRecord` | Intentar guardar una carrera sin terminar o sin fechas: un error de programación | **No** se convierte en `TripNotSaved`, para no disfrazarlo de problema del disco |
 
@@ -411,9 +412,9 @@ El proyecto se desarrolla con **TDD**: primero el test en rojo, luego el código
 | Unitarias de la CLI | `tests/unit/ui/` | `Cli` y `format_euros` con consola simulada | 18 |
 | Aceptación | `tests/acceptance/` | US-01 a US-04 (4) y el historial en disco, TK-04 (3), de principio a fin | 7 |
 | Convenciones | `tests/test_conventions.py` | Cabecera de cada `.py` (crece con cada fichero nuevo) | 53 |
-| Integración | `tests/integration/` | Cargador de tarifas (30), repositorio JSON (15) y arranque (17), con ficheros temporales | 62 |
+| Integración | `tests/integration/` | Cargador de tarifas (30), repositorio JSON (19) y arranque (18), con ficheros temporales | 67 |
 | Contrato | `tests/contract/` | La misma batería de 9 tests para el repositorio en memoria y el JSON | 18 |
-| | | **Total** | **200** |
+| | | **Total** | **205** |
 
 **Dobles de prueba** (`tests/fakes.py`): `FakeClock` (reloj que avanza a mano), `FakeWallClock` (reloj de pared controlable), `BrokenRepository` (guardado que siempre falla) y `ScriptedInput` (consola que devuelve comandos y avanza el reloj entre ellos). Los fixtures compartidos están en `tests/conftest.py`.
 
@@ -496,6 +497,5 @@ python -m ruff check src tests
 | L6 | El módulo `taximetro.core.ports` importa `Trip`, lo que acopla el contrato al modelo. Es aceptable mientras `Trip` sea el único agregado. | Revisar si el modelo crece. |
 | L7 | **La validación se repite**: el cargador comprueba que los valores no sean negativos (para poder nombrar la clave y el fichero) y `Tariff` también lo comprueba. | Duplicación asumida: `Tariff` debe protegerse aunque se construya por otro camino, como la API de la Fase 4. |
 | L8 | **Las rutas por defecto dependen de la instalación en modo desarrollo**: se calculan desde la ubicación del código (`parents[2]`), y en una instalación normal no apuntarían a `config/` ni a `data/`. | Usar `TAXIMETRO_RATES` y `TAXIMETRO_DATA_DIR`; en la Fase 4 (Docker) se fijarán explícitamente. |
-| L9 | **Una carpeta de datos que no es una carpeta no se detecta al arrancar**: si `TAXIMETRO_DATA_DIR` apunta a un fichero, el programa arranca y falla al guardar cada carrera, con el total y el aviso del motivo. | Comprobarlo al arrancar (ciclo pendiente). |
-| L10 | **`TAXIMETRO_LOG_DIR` está reservada pero sin efecto**: aún no hay logs. | US-06. |
+| L9 | **`TAXIMETRO_LOG_DIR` está reservada pero sin efecto**: aún no hay logs. | US-06. |
 

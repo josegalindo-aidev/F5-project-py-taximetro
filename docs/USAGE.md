@@ -194,6 +194,7 @@ Al arrancar, el programa lee el historial una vez. Si no puede, **no arranca** y
 |---|---|---|
 | `El historial '<ruta>' está dañado: …` | El fichero no es JSON válido, no es una lista de carreras o alguna carrera no se puede interpretar | Guarda una copia, corrige el fichero o quítalo para empezar un historial nuevo |
 | `No se pudo leer el historial '<ruta>': …` | El fichero existe pero no se puede leer: falta el permiso o la ruta es una carpeta | Revisa los permisos y que `trips.json` sea un fichero |
+| `La carpeta de datos '<ruta>' no es una carpeta: es un fichero.` | `TAXIMETRO_DATA_DIR` apunta a un fichero, o una carpeta por encima de la ruta lo es | Indica una carpeta, existente o que todavía no exista |
 
 Si el fallo ocurre **después** de arrancar, al finalizar una carrera, el total se muestra igualmente seguido de un `Aviso:` (apartado 5): un problema del historial nunca esconde el importe.
 
