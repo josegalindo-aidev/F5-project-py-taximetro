@@ -15,6 +15,7 @@ Guía para usar y configurar el taxímetro desde la línea de comandos. Para ins
 | **Estado** | Situación del taxi durante la carrera: *parado* o *en movimiento*. |
 | **Tramo** | Periodo de tiempo con el mismo estado. Cada cambio de estado cierra un tramo. |
 | **Tarifa** | Precio por segundo, que depende del estado. |
+| **Historial** | Fichero donde se guardan las carreras finalizadas. Se conserva al cerrar el programa (apartado 8). |
 
 ### Tarifas
 
@@ -55,6 +56,7 @@ Ejemplo de sesión. Las líneas que empiezan por `>` son lo que escribes tú; lo
 
 ```
 Taxímetro digital TTX-247
+Historial: /ruta/a/data/trips.json
 Comandos disponibles:
   iniciar    Inicia una carrera (el taxi empieza parado)
   parar      El taxi está parado
@@ -89,8 +91,9 @@ Tras `finalizar` no hace falta cerrar el programa: puedes escribir `iniciar` par
 | `Ya hay una carrera en curso. Usa 'finalizar' antes de iniciar otra.` | Has escrito `iniciar` con una carrera ya iniciada | Escribe `finalizar` y después `iniciar` |
 | `Comando desconocido: 'xxx'. Escribe 'ayuda'.` | El comando no existe | Escribe `ayuda` para ver la lista |
 | `Aviso: La carrera en curso no se ha cobrado.` | Has salido del programa sin finalizar la carrera | Vuelve a abrirlo; esa carrera no se recupera |
+| `Aviso: No se pudo guardar la carrera en el historial: …` | Tras `finalizar`, el total se ha mostrado, pero no se pudo guardar (disco lleno, fichero bloqueado, historial dañado) | Anota el total. Revisa el motivo que indica el aviso; el programa sigue funcionando y puedes iniciar otra carrera |
 
-Los errores **no cierran el programa**: puedes seguir escribiendo comandos. Los errores del fichero de tarifas son distintos: ocurren al arrancar y se explican en el apartado 7.
+Los errores **no cierran el programa**: puedes seguir escribiendo comandos. Los errores del fichero de tarifas y del historial son distintos: ocurren al arrancar y se explican en los apartados 7 y 8.
 
 ## 6. Cerrar el programa
 
@@ -157,22 +160,61 @@ El programa **no arranca**: no usa ninguna tarifa por defecto, porque cobrar con
 | `El valor de 'stopped' no es un número finito: 'NaN' (<ruta>)` | `NaN` o `Infinity` | Usa un número normal |
 | `El valor de 'stopped' no puede ser negativo: '-0.02' (<ruta>)` | Valor negativo | Usa un valor mayor o igual que cero |
 
-## 8. Limitaciones actuales
+## 8. Dónde se guardan los datos
+
+Cada vez que finalizas una carrera, se añade a un fichero `trips.json` dentro de la **carpeta de datos**. Al arrancar, el programa muestra la ruta completa en la línea `Historial: …`.
+
+| Qué | Dónde | Cómo cambiarlo |
+|---|---|---|
+| Historial de carreras | `trips.json` dentro de la carpeta de datos. Por defecto, `data/` en la raíz del proyecto | Variable de entorno `TAXIMETRO_DATA_DIR`, que indica **una carpeta**, no un fichero |
+| Logs de ejecución | Carpeta propia, separada de los datos | `TAXIMETRO_LOG_DIR`. **Reservada**: se usará cuando se añadan los logs (US-06) y todavía no tiene efecto |
+| Tarifas | `config/rates.toml` | `TAXIMETRO_RATES` (apartado 7) |
+
+La carpeta de datos y la de logs son independientes a propósito: en una instalación de producción se pueden montar en ubicaciones distintas (por ejemplo, volúmenes diferentes). Se configuran como **carpetas** y no como ficheros porque, para no perder el historial si algo falla a mitad de escritura, el programa escribe primero un fichero temporal junto a `trips.json` y después lo intercambia por el original. Eso exige poder crear ficheros en esa carpeta.
+
+En Git Bash:
+
+```bash
+TAXIMETRO_DATA_DIR=/ruta/a/mis/datos python -m taximetro
+```
+
+En PowerShell:
+
+```powershell
+$env:TAXIMETRO_DATA_DIR = "C:\ruta\a\mis\datos"; python -m taximetro
+```
+
+Si la carpeta no existe, el programa la crea al guardar la primera carrera. Una variable vacía se ignora y se usa la carpeta por defecto.
+
+### Si el historial tiene problemas
+
+Al arrancar, el programa lee el historial una vez. Si no puede, **no arranca** y no toca el fichero, para que puedas recuperarlo. Muestra un mensaje que empieza por `Error:` y termina con **código de salida 1**.
+
+| Mensaje | Causa | Qué hacer |
+|---|---|---|
+| `El historial '<ruta>' está dañado: …` | El fichero no es JSON válido, no es una lista de carreras o alguna carrera no se puede interpretar | Guarda una copia, corrige el fichero o quítalo para empezar un historial nuevo |
+| `No se pudo leer el historial '<ruta>': …` | El fichero existe pero no se puede leer: falta el permiso o la ruta es una carpeta | Revisa los permisos y que `trips.json` sea un fichero |
+
+Si el fallo ocurre **después** de arrancar, al finalizar una carrera, el total se muestra igualmente seguido de un `Aviso:` (apartado 5): un problema del historial nunca esconde el importe.
+
+## 9. Limitaciones actuales
 
 | Limitación | Detalle |
 |---|---|
-| Sin historial | Al cerrar el programa se pierde todo; no hay histórico del día todavía (Fase 2). |
+| Historial sin consulta | Las carreras finalizadas se guardan, pero todavía no hay un comando para consultarlas (histórico del día, US-05). |
+| Una carrera sin finalizar no se guarda | Solo se guardan las carreras finalizadas; si sales con una en curso, no se recupera. |
+| Un solo programa por carpeta de datos | Si dos instancias escriben a la vez en la misma carpeta, pueden perderse carreras. |
 | Tarifas leídas al arrancar | Si editas el fichero con el programa abierto, el cambio no se aplica hasta volver a abrirlo. |
 | Estado indicado a mano | El taxi solo puede estar parado o en movimiento, y el estado lo indicas tú con `parar` y `mover`. El programa no mide la velocidad, así que no aplica por sí mismo la regla de «menos de 20 km/h». |
 | Una carrera a la vez | Solo hay una carrera activa en cada momento. |
 
-## 9. Qué llegará en las siguientes fases
+## 10. Qué llegará en las siguientes fases
 
-Las tarifas configurables, que estaban previstas para la Fase 2, ya están disponibles (apartado 7).
+Las tarifas configurables y el historial en disco, previstos para la Fase 2, ya están disponibles (apartados 7 y 8).
 
 | Fase | Novedades para el usuario |
 |---|---|
-| 2 | Histórico del día y registro de operaciones |
+| 2 | Consulta del histórico del día y registro de operaciones (logs) |
 | 3 | Acceso con contraseña e interfaz gráfica con botones grandes para tablet |
 | 4 | API REST, panel web para el responsable de flota y despliegue con un único comando |
 
