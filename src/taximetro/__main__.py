@@ -9,7 +9,7 @@ from collections.abc import Callable, Mapping
 from datetime import datetime
 from pathlib import Path
 
-from taximetro.core.errors import TariffFileError
+from taximetro.core.errors import TariffFileError, TripHistoryError
 from taximetro.core.ports import Clock, TripRepository, WallClock
 from taximetro.core.trip_service import TripService
 from taximetro.infra.repos.json_file import JsonTripRepository
@@ -65,7 +65,9 @@ def main(
     repository = JsonTripRepository(trips_path or default_trips_path(os.environ))
     try:
         service = build_service(path, clock, repository=repository)
-    except TariffFileError as error:
+        # Lee el historial una vez: si está dañado, se avisa ahora y no al cobrar una carrera.
+        repository.list_finished(local_now().date())
+    except (TariffFileError, TripHistoryError) as error:
         print(f"Error: {error}", file=sys.stderr)
         return 1
     Cli(service, input_fn, output_fn).run()
