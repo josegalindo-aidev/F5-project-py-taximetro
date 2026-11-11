@@ -123,3 +123,19 @@ def test_si_falla_la_escritura_a_medias_el_historial_anterior_sigue_intacto(path
     assert path.read_text(encoding="utf-8") == antes  # el fichero no se tocó
     assert [t.id for t in repository.list_finished(DAY)] == ["primera"]
     assert list(path.parent.iterdir()) == [path]  # sin ficheros temporales sueltos
+
+
+# Historial que existe pero no se puede leer (aquí, una carpeta en lugar de un fichero).
+@pytest.mark.parametrize("operacion", ["listar", "guardar"])
+def test_un_historial_ilegible_da_un_error_que_nombra_el_fichero_y_el_motivo(path, operacion):
+    path.mkdir()
+    repository = JsonTripRepository(path)
+
+    with pytest.raises(TripHistoryError) as info:
+        if operacion == "listar":
+            repository.list_finished(DAY)
+        else:
+            repository.save(finished_trip())
+
+    assert "No se pudo leer el historial" in str(info.value)
+    assert "historial.json" in str(info.value)

@@ -179,3 +179,26 @@ def test_al_arrancar_el_programa_indica_donde_guarda_el_historial(tmp_path):
     )
 
     assert f"Historial: {data_dir / 'trips.json'}" in out
+
+
+def test_con_un_historial_ilegible_muestra_el_error_y_devuelve_1_sin_arrancar_la_cli(
+    tmp_path, capsys
+):
+    data_dir = tmp_path / "datos"
+    (data_dir / "trips.json").mkdir(parents=True)  # existe, pero no es un fichero legible
+    clock = FakeClock()
+    out: list[str] = []
+
+    code = main(
+        write_rates(tmp_path),
+        data_dir,
+        clock=clock,
+        input_fn=ScriptedInput(clock, [(0, "iniciar")]),
+        output_fn=out.append,
+    )
+
+    captured = capsys.readouterr()
+    assert code == 1
+    assert captured.err.startswith("Error: No se pudo leer el historial")
+    assert "Traceback" not in captured.err
+    assert out == []  # la CLI no llegó a arrancar
