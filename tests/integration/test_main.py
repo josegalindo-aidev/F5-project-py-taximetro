@@ -134,3 +134,29 @@ def test_sin_ruta_explicita_el_historial_va_donde_dice_la_variable(tmp_path, mon
     run_one_trip(write_rates(tmp_path), None)
 
     assert len(json.loads(trips.read_text(encoding="utf-8"))) == 1
+
+
+def test_con_un_historial_danado_muestra_el_error_y_devuelve_1_sin_arrancar_la_cli(
+    tmp_path, capsys
+):
+    trips = tmp_path / "historial.json"
+    trips.write_text("{esto no es json", encoding="utf-8")
+    clock = FakeClock()
+    out: list[str] = []
+
+    code = main(
+        write_rates(tmp_path),
+        trips,
+        clock=clock,
+        input_fn=ScriptedInput(clock, [(0, "iniciar")]),
+        output_fn=out.append,
+    )
+
+    captured = capsys.readouterr()
+    assert code == 1
+    assert captured.err.startswith("Error: ")
+    assert "historial.json" in captured.err
+    assert "Traceback" not in captured.err
+    assert captured.out == ""
+    assert out == []  # la CLI no llegó a arrancar
+    assert trips.read_text(encoding="utf-8") == "{esto no es json"  # no se toca
