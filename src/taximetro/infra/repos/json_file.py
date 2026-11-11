@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import json
+import os
 from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
@@ -24,8 +25,7 @@ class JsonTripRepository:
             raise InvalidTripRecord("No se puede guardar una carrera sin fechas.")
         records = self._read()
         records.append(_to_record(trip))
-        self._path.parent.mkdir(parents=True, exist_ok=True)
-        self._path.write_text(json.dumps(records, indent=2), encoding="utf-8")
+        self._write(records)
 
     def list_finished(self, day: date) -> list[Trip]:
         try:
@@ -45,6 +45,17 @@ class JsonTripRepository:
         if not isinstance(records, list):
             raise self._damaged("se esperaba una lista de carreras")
         return records
+
+    def _write(self, records: list[dict]) -> None:
+        """Escribe en un temporal y lo intercambia: el fichero nunca queda a medias."""
+        self._path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = self._path.with_name(self._path.name + ".tmp")
+        try:
+            temporary.write_text(json.dumps(records, indent=2), encoding="utf-8")
+            os.replace(temporary, self._path)
+        except OSError:
+            temporary.unlink(missing_ok=True)
+            raise
 
     def _damaged(self, reason: str) -> TripHistoryError:
         return TripHistoryError(f"El historial '{self._path}' está dañado: {reason}")
