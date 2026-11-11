@@ -11,6 +11,7 @@ from taximetro.core.errors import (
     TaximetroError,
     TripAlreadyFinished,
     TripAlreadyStarted,
+    TripNotSaved,
     TripNotStarted,
 )
 from taximetro.core.state import State
@@ -98,7 +99,12 @@ class Cli:
         self._print(f"Estado: {STATE_LABEL[trip.state]} - Importe actual: {amount}")
 
     def _finish(self) -> None:
-        total = self._service.finish()
+        try:
+            total = self._service.finish()
+        except TripNotSaved as error:
+            self._print(f"Carrera finalizada. Total: {format_euros(error.total)}")
+            self._print(f"Aviso: {error}")
+            return
         self._print(f"Carrera finalizada. Total: {format_euros(total)}")
 
     def _goodbye(self) -> None:
