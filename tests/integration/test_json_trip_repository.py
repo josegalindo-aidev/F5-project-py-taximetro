@@ -139,3 +139,24 @@ def test_un_historial_ilegible_da_un_error_que_nombra_el_fichero_y_el_motivo(pat
 
     assert "No se pudo leer el historial" in str(info.value)
     assert "historial.json" in str(info.value)
+
+
+# La "carpeta" de datos es en realidad un fichero (por ejemplo, TAXIMETRO_DATA_DIR mal escrita).
+@pytest.mark.parametrize("operacion", ["listar", "guardar"])
+@pytest.mark.parametrize("subcarpetas", [[], ["2026", "enero"]], ids=["directa", "anidada"])
+def test_si_la_carpeta_de_datos_es_un_fichero_da_un_error_que_lo_nombra(
+    tmp_path, operacion, subcarpetas
+):
+    no_es_carpeta = tmp_path / "no-soy-carpeta"
+    no_es_carpeta.write_text("esto es un fichero", encoding="utf-8")
+    repository = JsonTripRepository(no_es_carpeta.joinpath(*subcarpetas, "historial.json"))
+
+    with pytest.raises(TripHistoryError) as info:
+        if operacion == "listar":
+            repository.list_finished(DAY)
+        else:
+            repository.save(finished_trip())
+
+    assert "no es una carpeta" in str(info.value)
+    assert "no-soy-carpeta" in str(info.value)
+    assert no_es_carpeta.read_text(encoding="utf-8") == "esto es un fichero"  # no se toca

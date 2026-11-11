@@ -202,3 +202,25 @@ def test_con_un_historial_ilegible_muestra_el_error_y_devuelve_1_sin_arrancar_la
     assert captured.err.startswith("Error: No se pudo leer el historial")
     assert "Traceback" not in captured.err
     assert out == []  # la CLI no llegó a arrancar
+
+
+def test_si_la_carpeta_de_datos_es_un_fichero_muestra_el_error_y_devuelve_1(tmp_path, capsys):
+    no_es_carpeta = tmp_path / "no-soy-carpeta"
+    no_es_carpeta.write_text("esto es un fichero", encoding="utf-8")
+    clock = FakeClock()
+    out: list[str] = []
+
+    code = main(
+        write_rates(tmp_path),
+        no_es_carpeta,
+        clock=clock,
+        input_fn=ScriptedInput(clock, [(0, "iniciar")]),
+        output_fn=out.append,
+    )
+
+    captured = capsys.readouterr()
+    assert code == 1
+    assert captured.err.startswith("Error: ")
+    assert "no es una carpeta" in captured.err
+    assert "Traceback" not in captured.err
+    assert out == []  # la CLI no llegó a arrancar
