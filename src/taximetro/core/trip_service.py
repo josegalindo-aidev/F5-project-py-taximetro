@@ -7,7 +7,12 @@ from __future__ import annotations
 from decimal import Decimal
 from uuid import uuid4
 
-from taximetro.core.errors import TripAlreadyStarted, TripNotSaved, TripNotStarted
+from taximetro.core.errors import (
+    TripAlreadyStarted,
+    TripHistoryError,
+    TripNotSaved,
+    TripNotStarted,
+)
 from taximetro.core.ports import Clock, TripRepository, WallClock
 from taximetro.core.tariff import Tariff
 from taximetro.core.trip import State, Trip
@@ -51,7 +56,7 @@ class TripService:
         self._active = None  # libre para la siguiente carrera, aunque falle el guardado
         try:
             self._repository.save(trip)
-        except OSError as error:
+        except (OSError, TripHistoryError) as error:
             raise TripNotSaved(total, str(error)) from error
         return total
 
