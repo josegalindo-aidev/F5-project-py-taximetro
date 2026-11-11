@@ -12,6 +12,7 @@ from pathlib import Path
 from taximetro.core.errors import TariffFileError
 from taximetro.core.ports import Clock, TripRepository, WallClock
 from taximetro.core.trip_service import TripService
+from taximetro.infra.repos.json_file import JsonTripRepository
 from taximetro.infra.repos.memory import InMemoryTripRepository
 from taximetro.infra.tariff_loader import load_tariff
 from taximetro.ui.cli.app import Cli
@@ -61,8 +62,9 @@ def main(
     output_fn: Callable[[str], None] = print,
 ) -> int:
     path = rates_path or default_rates_path(os.environ)
+    repository = JsonTripRepository(trips_path or default_trips_path(os.environ))
     try:
-        service = build_service(path, clock)
+        service = build_service(path, clock, repository=repository)
     except TariffFileError as error:
         print(f"Error: {error}", file=sys.stderr)
         return 1

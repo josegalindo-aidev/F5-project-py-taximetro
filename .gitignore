@@ -133,3 +133,6 @@ Desktop.ini
 # Excel temporales y cachés anidadas
 ~$*
 **/__pycache__/
+
+# Historial de carreras del taxímetro (datos locales)
+data/
