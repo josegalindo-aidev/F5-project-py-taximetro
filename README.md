@@ -69,7 +69,7 @@ Tarifas (Zona EMT Madrid, junio 2025): **0,02 €/s** parado (o a menos de 20 km
 
 Cada carrera finalizada se guarda en un historial en disco, que se conserva al cerrar el programa. Al arrancar, el programa indica la ruta (`Historial: …`). La carpeta de datos se elige con la variable `TAXIMETRO_DATA_DIR` y, por defecto, es `data/` en la raíz del proyecto.
 
-Manual completo, con ejemplos, cómo configurar las tarifas y dónde se guardan los datos, y mensajes de error: [docs/usage.md](docs/usage.md).
+Manual completo, con ejemplos, cómo configurar las tarifas y dónde se guardan los datos, y mensajes de error: [docs/USAGE.md](docs/USAGE.md).
 
 ## Pruebas y calidad
 
@@ -115,8 +115,8 @@ data/          Historial de carreras (trips.json); se crea al guardar la primera
 
 | Documento | Contenido |
 |---|---|
-| [docs/usage.md](docs/usage.md) | Manual de uso del taxímetro |
-| [docs/architecture.md](docs/architecture.md) | Arquitectura, módulos y decisiones de diseño |
+| [docs/USAGE.md](docs/USAGE.md) | Manual de uso del taxímetro |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Arquitectura, módulos y decisiones de diseño |
 | [docs/TESTING.md](docs/TESTING.md) | Cómo se prueba el proyecto: TDD, niveles de prueba, ejecución y mutaciones |
 | [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | Flujo de trabajo: ramas, PR, commits y releases |
 | [docs/project_backlog.xlsx](docs/project_backlog.xlsx) | Backlog con historias de usuario, fases y avance |

@@ -1,6 +1,6 @@
 <!--
 Proyecto: py-taximetro
-fuente: docs/architecture.md
+fuente: docs/ARCHITECTURE.md
 -->
 
 # Arquitectura del taxímetro digital (TTX-247)
@@ -177,7 +177,7 @@ El cargador se organiza en una función pública y cuatro privadas, cada una con
 | `_required_values` | Extraer las claves `stopped` y `moving` |
 | `_to_decimal` | Validar y convertir un valor: texto, número, finito y no negativo |
 
-El formato del fichero y los mensajes de error están en el [manual de uso](usage.md#7-configurar-las-tarifas).
+El formato del fichero y los mensajes de error están en el [manual de uso](USAGE.md#7-configurar-las-tarifas).
 
 #### Repositorio JSON
 
@@ -429,7 +429,7 @@ El proyecto se desarrolla con **TDD**: primero el test en rojo, luego el código
 |---|---|
 | Cabecera de cada fichero `.py` | Dos líneas al principio: `# Proyecto: py-taximetro` y `# fuente: <ruta desde la raíz>` (por ejemplo, `src/taximetro/core/trip.py`). Los ficheros vacíos, como los `__init__.py`, no la llevan. La regla se comprueba en `tests/test_conventions.py`. |
 | Versión | La versión vive solo en `pyproject.toml`. El criterio de versionado y el estado de las versiones publicadas se documentan únicamente en el [README](../README.md#versionado); no se repiten en ningún otro fichero. |
-| Documentación | `README.md` (entrada del repositorio: instalación, arranque y enlaces), `docs/usage.md` (manual de uso), `docs/architecture.md` (este documento), `docs/TESTING.md` (cómo se prueba) y `docs/CONTRIBUTING.md` (flujo de trabajo). El README resume y enlaza; el detalle vive en `docs/`, y el README es el único documento de la raíz. |
+| Documentación | `README.md` (entrada del repositorio: instalación, arranque y enlaces), `docs/USAGE.md` (manual de uso), `docs/ARCHITECTURE.md` (este documento), `docs/TESTING.md` (cómo se prueba) y `docs/CONTRIBUTING.md` (flujo de trabajo). El README resume y enlaza; el detalle vive en `docs/`, y el README es el único documento de la raíz. Los documentos `.md` llevan el **nombre en mayúsculas** (`USAGE.md`, `ARCHITECTURE.md`…) para distinguirlos del código y de los tests, que van en minúsculas. |
 | Commits | Conventional Commits (`feat`, `fix`, `test`, `refactor`, `docs`, `chore`) con referencia al issue (`Refs #n`) |
 | Ramas y PR | Una rama de release por fase y una rama por funcionalidad; `main` solo avanza tras la demo. Reglas completas en [CONTRIBUTING.md](CONTRIBUTING.md). |
 | Seguimiento | Tablero GitHub Projects «TTX-247 Taxímetro» (campos Fase, Tipo, MoSCoW, Estimate y Status) y backlog en `docs/project_backlog.xlsx` |
