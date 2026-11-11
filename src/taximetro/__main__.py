@@ -54,6 +54,7 @@ def build_service(
 
 def main(
     rates_path: Path | None = None,
+    trips_path: Path | None = None,
     *,
     clock: Clock = time.monotonic,
     input_fn: Callable[[str], str] = input,
