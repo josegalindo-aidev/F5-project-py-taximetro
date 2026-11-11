@@ -163,3 +163,19 @@ def test_con_un_historial_danado_muestra_el_error_y_devuelve_1_sin_arrancar_la_c
     assert captured.out == ""
     assert out == []  # la CLI no llegó a arrancar
     assert trips.read_text(encoding="utf-8") == "{esto no es json"  # no se toca
+
+
+def test_al_arrancar_el_programa_indica_donde_guarda_el_historial(tmp_path):
+    data_dir = tmp_path / "datos"
+    clock = FakeClock()
+    out: list[str] = []
+
+    main(
+        write_rates(tmp_path),
+        data_dir,
+        clock=clock,
+        input_fn=ScriptedInput(clock, [(0, "salir")]),
+        output_fn=out.append,
+    )
+
+    assert f"Historial: {data_dir / 'trips.json'}" in out
