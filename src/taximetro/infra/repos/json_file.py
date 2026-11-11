@@ -24,6 +24,7 @@ class JsonTripRepository:
             raise InvalidTripRecord("No se puede guardar una carrera sin fechas.")
         records = self._read()
         records.append(_to_record(trip))
+        self._path.parent.mkdir(parents=True, exist_ok=True)
         self._path.write_text(json.dumps(records, indent=2), encoding="utf-8")
 
     def list_finished(self, day: date) -> list[Trip]:
