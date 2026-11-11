@@ -20,18 +20,20 @@ from taximetro.ui.cli.app import Cli
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
+def _path_from_environment(environ: Mapping[str, str], name: str, default: Path) -> Path:
+    """Ruta de la variable de entorno `name`; vacía o ausente, usa `default`."""
+    configured = environ.get(name, "").strip()
+    return Path(configured) if configured else default
+
+
 def default_rates_path(environ: Mapping[str, str]) -> Path:
-    configured = environ.get("TAXIMETRO_RATES", "").strip()
-    if configured:
-        return Path(configured)
-    return PROJECT_ROOT / "config" / "rates.toml"
+    default = PROJECT_ROOT / "config" / "rates.toml"
+    return _path_from_environment(environ, "TAXIMETRO_RATES", default)
 
 
 def default_trips_path(environ: Mapping[str, str]) -> Path:
-    configured = environ.get("TAXIMETRO_TRIPS", "").strip()
-    if configured:
-        return Path(configured)
-    return PROJECT_ROOT / "data" / "trips.json"
+    default = PROJECT_ROOT / "data" / "trips.json"
+    return _path_from_environment(environ, "TAXIMETRO_TRIPS", default)
 
 
 def local_now() -> datetime:
