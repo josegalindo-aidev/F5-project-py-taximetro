@@ -82,3 +82,20 @@ def test_guardar_sobre_un_historial_danado_falla_y_no_lo_sobrescribe(path, conte
         JsonTripRepository(path).save(finished_trip())
 
     assert path.read_text(encoding="utf-8") == content  # no se pierde lo que hubiera
+
+
+# Primer arranque: la carpeta del historial todavía no existe.
+def test_guardar_crea_las_carpetas_que_falten_y_el_historial_perdura(tmp_path):
+    path = tmp_path / "data" / "2026" / "historial.json"
+
+    JsonTripRepository(path).save(finished_trip())
+
+    reopened = JsonTripRepository(path)  # como al reiniciar el programa
+    assert [trip.id for trip in reopened.list_finished(DAY)] == ["nueva"]
+
+
+def test_sin_fichero_el_historial_esta_vacio_y_listar_no_lo_crea(tmp_path):
+    path = tmp_path / "data" / "historial.json"
+
+    assert JsonTripRepository(path).list_finished(DAY) == []
+    assert not path.parent.exists()
