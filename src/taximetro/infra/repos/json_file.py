@@ -40,6 +40,10 @@ class JsonTripRepository:
             records = json.loads(self._path.read_text(encoding="utf-8"))
         except ValueError as error:  # JSON mal formado o texto que no es UTF-8
             raise self._damaged(str(error)) from error
+        except OSError as error:  # existe, pero no se puede leer (permisos, es una carpeta...)
+            raise TripHistoryError(
+                f"No se pudo leer el historial '{self._path}': {error.strerror or error}"
+            ) from error
         if not isinstance(records, list):
             raise self._damaged("se esperaba una lista de carreras")
         return records
