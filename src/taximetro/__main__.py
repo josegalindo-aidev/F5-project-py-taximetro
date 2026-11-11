@@ -27,7 +27,10 @@ def default_rates_path(environ: Mapping[str, str]) -> Path:
 
 
 def default_trips_path(environ: Mapping[str, str]) -> Path:
-    raise NotImplementedError
+    configured = environ.get("TAXIMETRO_TRIPS", "").strip()
+    if configured:
+        return Path(configured)
+    return PROJECT_ROOT / "data" / "trips.json"
 
 
 def local_now() -> datetime:
