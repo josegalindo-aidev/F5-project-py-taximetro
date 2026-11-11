@@ -5,9 +5,10 @@ from decimal import Decimal
 import pytest
 
 from taximetro.core.trip_service import TripService
+from taximetro.infra.repos.memory import InMemoryTripRepository
 from taximetro.ui.cli.app import Cli
 from taximetro.ui.cli.format import format_euros
-from tests.fakes import FakeClock, ScriptedInput
+from tests.fakes import FakeClock, FakeWallClock, ScriptedInput
 
 
 @pytest.fixture
@@ -18,7 +19,7 @@ def clock() -> FakeClock:
 def run_cli(tariff, clock, steps) -> str:
     """Ejecuta la CLI con una consola simulada y devuelve todo lo impreso."""
     out: list[str] = []
-    service = TripService(tariff, clock)
+    service = TripService(tariff, clock, FakeWallClock(), InMemoryTripRepository())
     Cli(service, input_fn=ScriptedInput(clock, steps), output_fn=out.append).run()
     return "\n".join(out)
 
@@ -96,3 +97,4 @@ def test_fin_de_entrada_termina_sin_error(tariff, clock):
 def test_salir_con_carrera_en_curso_avisa(tariff, clock):
     out = run_cli(tariff, clock, [(0, "iniciar"), (0, "salir")])
     assert "La carrera en curso no se ha cobrado" in out
+

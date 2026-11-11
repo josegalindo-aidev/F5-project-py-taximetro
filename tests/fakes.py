@@ -2,6 +2,21 @@
 # fuente: tests/fakes.py
 """Dobles de test compartidos."""
 
+from datetime import UTC, datetime, timedelta
+
+
+class FakeWallClock:
+    """Reloj de pared controlable: cumple el puerto `WallClock`."""
+
+    def __init__(self, now: datetime | None = None) -> None:
+        self.now = now or datetime(2026, 11, 11, 10, 0, 0, tzinfo=UTC)
+
+    def __call__(self) -> datetime:
+        return self.now
+
+    def advance(self, seconds: float) -> None:
+        self.now += timedelta(seconds=seconds)
+
 
 class FakeClock:
     """Reloj controlable: cumple el puerto `Clock`."""
@@ -14,6 +29,16 @@ class FakeClock:
 
     def advance(self, seconds: float) -> None:
         self.t += seconds
+
+
+class BrokenRepository:
+    """Repositorio cuyo guardado siempre falla (disco lleno, fichero bloqueado...)."""
+
+    def save(self, trip):
+        raise OSError("disco lleno")
+
+    def list_finished(self, day):
+        return []
 
 
 class ScriptedInput:

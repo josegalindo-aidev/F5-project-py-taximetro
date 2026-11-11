@@ -6,11 +6,13 @@ import os
 import sys
 import time
 from collections.abc import Callable, Mapping
+from datetime import datetime
 from pathlib import Path
 
 from taximetro.core.errors import TariffFileError
-from taximetro.core.ports import Clock
+from taximetro.core.ports import Clock, TripRepository, WallClock
 from taximetro.core.trip_service import TripService
+from taximetro.infra.repos.memory import InMemoryTripRepository
 from taximetro.infra.tariff_loader import load_tariff
 from taximetro.ui.cli.app import Cli
 
@@ -24,8 +26,23 @@ def default_rates_path(environ: Mapping[str, str]) -> Path:
     return PROJECT_ROOT / "config" / "rates.toml"
 
 
-def build_service(rates_path: Path, clock: Clock = time.monotonic) -> TripService:
-    return TripService(load_tariff(rates_path), clock)
+def local_now() -> datetime:
+    """Fecha y hora actuales en la zona horaria del ordenador."""
+    return datetime.now().astimezone()
+
+
+def build_service(
+    rates_path: Path,
+    clock: Clock = time.monotonic,
+    wall_clock: WallClock = local_now,
+    repository: TripRepository | None = None,
+) -> TripService:
+    return TripService(
+        load_tariff(rates_path),
+        clock,
+        wall_clock,
+        repository if repository is not None else InMemoryTripRepository(),
+    )
 
 
 def main(
