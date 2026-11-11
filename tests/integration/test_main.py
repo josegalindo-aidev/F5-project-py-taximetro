@@ -10,6 +10,7 @@ import pytest
 
 from taximetro.__main__ import build_service, default_rates_path, default_trips_path, main
 from taximetro.core.tariff import Tariff
+from taximetro.infra.repos.memory import InMemoryTripRepository
 from taximetro.infra.tariff_loader import load_tariff
 from tests.fakes import FakeClock, ScriptedInput
 
@@ -58,7 +59,7 @@ def test_el_servicio_cobra_con_las_tarifas_del_fichero(tmp_path):
     path.write_text('[rates]\nstopped = "0.10"\nmoving = "0.20"\n', encoding="utf-8")
     clock = FakeClock()
 
-    service = build_service(path, clock)
+    service = build_service(path, InMemoryTripRepository(), clock)
     service.start()
     clock.advance(10)
 
