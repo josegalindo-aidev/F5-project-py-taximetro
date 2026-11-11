@@ -48,6 +48,7 @@ class Cli:
         self._service = service
         self._input = input_fn
         self._print = output_fn
+        self._notes = notes
         self._commands: dict[str, Callable[[], None]] = {
             "iniciar": self._start,
             "parar": lambda: self._set_state(State.STOPPED),
@@ -59,6 +60,8 @@ class Cli:
 
     def run(self) -> None:
         self._print("Taxímetro digital TTX-247")
+        for note in self._notes:
+            self._print(note)
         self._print(HELP)
         while True:
             try:

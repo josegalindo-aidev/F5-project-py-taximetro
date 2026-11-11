@@ -58,7 +58,8 @@ def main(
     output_fn: Callable[[str], None] = print,
 ) -> int:
     path = rates_path or default_rates_path(os.environ)
-    repository = JsonTripRepository((data_dir or default_data_dir(os.environ)) / TRIPS_FILENAME)
+    trips_file = (data_dir or default_data_dir(os.environ)) / TRIPS_FILENAME
+    repository = JsonTripRepository(trips_file)
     try:
         service = build_service(path, repository, clock)
         # Lee el historial una vez: si está dañado, se avisa ahora y no al cobrar una carrera.
@@ -66,7 +67,7 @@ def main(
     except (TariffFileError, TripHistoryError) as error:
         print(f"Error: {error}", file=sys.stderr)
         return 1
-    Cli(service, input_fn, output_fn).run()
+    Cli(service, input_fn, output_fn, [f"Historial: {trips_file}"]).run()
     return 0
 
 
