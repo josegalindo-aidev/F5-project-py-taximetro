@@ -4,10 +4,16 @@ from decimal import Decimal
 
 import pytest
 
-from taximetro.core.errors import TripAlreadyStarted, TripNotStarted
+from taximetro.core.errors import (
+    InvalidTripRecord,
+    TripAlreadyStarted,
+    TripNotSaved,
+    TripNotStarted,
+)
 from taximetro.core.trip import State
 from taximetro.core.trip_service import TripService
-from tests.fakes import FakeClock
+from taximetro.infra.repos.memory import InMemoryTripRepository
+from tests.fakes import BrokenRepository, FakeClock, FakeWallClock
 
 
 @pytest.fixture
@@ -16,8 +22,18 @@ def clock() -> FakeClock:
 
 
 @pytest.fixture
-def service(tariff, clock) -> TripService:
-    return TripService(tariff, clock)
+def wall_clock() -> FakeWallClock:
+    return FakeWallClock()
+
+
+@pytest.fixture
+def repository() -> InMemoryTripRepository:
+    return InMemoryTripRepository()
+
+
+@pytest.fixture
+def service(tariff, clock, wall_clock, repository) -> TripService:
+    return TripService(tariff, clock, wall_clock, repository)
 
 
 def test_sin_carrera_al_arrancar(service):
@@ -88,3 +104,57 @@ def test_finalizar_sin_carrera_falla(service):
 def test_importe_actual_sin_carrera_falla(service):
     with pytest.raises(TripNotStarted):
         service.current_amount()
+
+
+# TK-04: el servicio estampa la carrera con la fecha y hora del reloj de pared
+def test_al_iniciar_la_carrera_guarda_la_fecha_de_inicio(service, wall_clock):
+    trip = service.start()
+
+    assert trip.started_at == wall_clock.now
+
+
+def test_al_finalizar_guarda_la_carrera_en_el_repositorio(service, clock, wall_clock, repository):
+    service.start()
+    clock.advance(10)
+    wall_clock.advance(10)
+    service.finish()
+
+    saved = repository.list_finished(wall_clock.now.date())
+    assert len(saved) == 1
+    trip = saved[0]
+    assert trip.total == Decimal("0.20")
+    assert trip.stopped_seconds == Decimal("10")
+    assert trip.finished_at == wall_clock.now
+
+
+def test_si_falla_el_guardado_la_carrera_se_cobra_y_el_error_lleva_el_total(
+    tariff, clock, wall_clock
+):
+    service = TripService(tariff, clock, wall_clock, BrokenRepository())
+    service.start()
+    clock.advance(10)
+
+    with pytest.raises(TripNotSaved) as info:
+        service.finish()
+
+    assert info.value.total == Decimal("0.20")
+    assert isinstance(info.value.__cause__, OSError)
+    assert service.active is None  # la carrera queda cerrada: se puede iniciar otra
+
+
+class BuggyRepository:
+    """Repositorio que rechaza la carrera por un error de programación, no del disco."""
+
+    def save(self, trip):
+        raise InvalidTripRecord("No se puede guardar una carrera sin fechas.")
+
+    def list_finished(self, day):
+        return []
+
+
+def test_un_error_de_programacion_no_se_disfraza_de_fallo_de_guardado(tariff, clock, wall_clock):
+    service = TripService(tariff, clock, wall_clock, BuggyRepository())
+    service.start()
+
+    with pytest.raises(InvalidTripRecord):
+        service.finish()
