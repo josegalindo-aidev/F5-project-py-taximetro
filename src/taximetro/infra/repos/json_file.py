@@ -9,7 +9,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
 
-from taximetro.core.errors import InvalidTripRecord
+from taximetro.core.errors import InvalidTripRecord, TripHistoryError
 from taximetro.core.trip import Trip
 
 
@@ -27,14 +27,26 @@ class JsonTripRepository:
         self._path.write_text(json.dumps(records, indent=2), encoding="utf-8")
 
     def list_finished(self, day: date) -> list[Trip]:
-        trips = [_from_record(record) for record in self._read()]
+        try:
+            trips = [_from_record(record) for record in self._read()]
+        except (KeyError, TypeError, ValueError, ArithmeticError) as error:
+            raise self._damaged(f"registro no válido ({error!r})") from error
         of_day = [trip for trip in trips if trip.finished_at.date() == day]
         return sorted(of_day, key=lambda trip: trip.finished_at)
 
     def _read(self) -> list[dict]:
         if not self._path.exists():
             return []
-        return json.loads(self._path.read_text(encoding="utf-8"))
+        try:
+            records = json.loads(self._path.read_text(encoding="utf-8"))
+        except ValueError as error:  # JSON mal formado o texto que no es UTF-8
+            raise self._damaged(str(error)) from error
+        if not isinstance(records, list):
+            raise self._damaged("se esperaba una lista de carreras")
+        return records
+
+    def _damaged(self, reason: str) -> TripHistoryError:
+        return TripHistoryError(f"El historial '{self._path}' está dañado: {reason}")
 
 
 def _to_record(trip: Trip) -> dict:
