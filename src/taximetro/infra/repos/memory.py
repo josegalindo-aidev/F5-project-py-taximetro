@@ -6,8 +6,8 @@ from __future__ import annotations
 
 from datetime import date
 
-from taximetro.core.errors import InvalidTripRecord
 from taximetro.core.trip import Trip
+from taximetro.infra.repos.validation import ensure_can_be_saved
 
 
 class InMemoryTripRepository:
@@ -15,10 +15,7 @@ class InMemoryTripRepository:
         self._trips: list[Trip] = []
 
     def save(self, trip: Trip) -> None:
-        if not trip.is_finished:
-            raise InvalidTripRecord("No se puede guardar una carrera sin terminar.")
-        if trip.started_at is None or trip.finished_at is None:
-            raise InvalidTripRecord("No se puede guardar una carrera sin fechas.")
+        ensure_can_be_saved(trip)
         self._trips.append(trip)
 
     def list_finished(self, day: date) -> list[Trip]:
