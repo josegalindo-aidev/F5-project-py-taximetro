@@ -335,7 +335,7 @@ Con `time.monotonic` el reloj no retrocede, y `TripService` descarta la carrera 
 
 ## 6. Estrategia de pruebas
 
-El proyecto se desarrolla con **TDD**: primero el test en rojo, luego el código mínimo en verde y después el refactor.
+El proyecto se desarrolla con **TDD**: primero el test en rojo, luego el código mínimo en verde y después el refactor. La guía práctica (cómo ejecutarlas, dobles de prueba, contratos y mutaciones) está en [TESTING.md](TESTING.md).
 
 | Nivel | Carpeta | Qué prueba | Pruebas |
 |---|---|---|---|
@@ -361,9 +361,9 @@ El proyecto se desarrolla con **TDD**: primero el test en rojo, luego el código
 |---|---|
 | Cabecera de cada fichero `.py` | Dos líneas al principio: `# Proyecto: py-taximetro` y `# fuente: <ruta desde la raíz>` (por ejemplo, `src/taximetro/core/trip.py`). Los ficheros vacíos, como los `__init__.py`, no la llevan. La regla se comprueba en `tests/test_conventions.py`. |
 | Versión | La versión vive solo en `pyproject.toml`. El criterio de versionado y el estado de las versiones publicadas se documentan únicamente en el [README](../README.md#versionado); no se repiten en ningún otro fichero. |
-| Documentación | `README.md` (entrada del repositorio: instalación, arranque y enlaces), `docs/usage.md` (manual de uso) y `docs/architecture.md` (este documento). El README resume y enlaza; el detalle vive en `docs/`. |
+| Documentación | `README.md` (entrada del repositorio: instalación, arranque y enlaces), `docs/usage.md` (manual de uso), `docs/architecture.md` (este documento), `docs/TESTING.md` (cómo se prueba) y `docs/CONTRIBUTING.md` (flujo de trabajo). El README resume y enlaza; el detalle vive en `docs/`, y el README es el único documento de la raíz. |
 | Commits | Conventional Commits (`feat`, `fix`, `test`, `refactor`, `docs`, `chore`) con referencia al issue (`Refs #n`) |
-| Ramas y PR | Una rama de release por fase y una rama por funcionalidad; `main` solo avanza tras la demo. Reglas completas en [CONTRIBUTING.md](../CONTRIBUTING.md). |
+| Ramas y PR | Una rama de release por fase y una rama por funcionalidad; `main` solo avanza tras la demo. Reglas completas en [CONTRIBUTING.md](CONTRIBUTING.md). |
 | Seguimiento | Tablero GitHub Projects «TTX-247 Taxímetro» (campos Fase, Tipo, MoSCoW, Estimate y Status) y backlog en `docs/project_backlog.xlsx` |
 | Estilo | `ruff` (líneas de hasta 100 caracteres) |
 

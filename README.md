@@ -9,6 +9,8 @@ Prototipo de taxímetro 100 % software para **TaxiTech Solutions S.L.**, que sus
 
 Proyecto del bootcamp de Factoría F5, desarrollado con **TDD** y una arquitectura modular.
 
+**Fuente del ejercicio:** [Factoria-F5-madrid/project-py-taximetro](https://github.com/Factoria-F5-madrid/project-py-taximetro), con el enunciado, las fases de entrega y los requisitos.
+
 ## Estado del proyecto
 
 | Fase | Contenido | Estado |
@@ -69,9 +71,19 @@ Manual completo, con ejemplos, cómo configurar las tarifas y mensajes de error:
 
 ## Pruebas y calidad
 
+Todas las pruebas:
+
 ```bash
 python -m pytest
 ```
+
+Solo las **pruebas de aceptación** (US-01 a US-04, de principio a fin por la consola):
+
+```bash
+python -m pytest tests/acceptance -v
+```
+
+Cobertura y calidad del código:
 
 ```bash
 python -m pytest --cov=src/taximetro --cov-report=term-missing
@@ -81,6 +93,8 @@ python -m pytest --cov=src/taximetro --cov-report=term-missing
 python -m ruff check src tests
 ```
 
+Las pruebas se ejecutan siempre con `pytest`. Un fichero de tests no es un programa: `python -m` sobre él no ejecuta ninguna prueba, termina en silencio y con código 0, aunque alguna fallara. Más ejemplos (un fichero, un test por nombre) y cómo se escriben las pruebas: [docs/TESTING.md](docs/TESTING.md).
+
 ## Estructura
 
 ```
@@ -89,7 +103,7 @@ src/taximetro/
 ├── ui/cli/    Interfaz de línea de comandos
 ├── infra/     Adaptadores externos: carga de tarifas (repositorios en las fases 2 a 4)
 └── __main__.py  Punto de arranque
-tests/         Pruebas unitarias, de aceptación y de convenciones
+tests/         Pruebas unitarias, de integración, de aceptación y de convenciones
 docs/          Documentación y backlog
 config/        Tarifas (rates.toml)
 ```
@@ -100,6 +114,8 @@ config/        Tarifas (rates.toml)
 |---|---|
 | [docs/usage.md](docs/usage.md) | Manual de uso del taxímetro |
 | [docs/architecture.md](docs/architecture.md) | Arquitectura, módulos y decisiones de diseño |
+| [docs/TESTING.md](docs/TESTING.md) | Cómo se prueba el proyecto: TDD, niveles de prueba, ejecución y mutaciones |
+| [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | Flujo de trabajo: ramas, PR, commits y releases |
 | [docs/project_backlog.xlsx](docs/project_backlog.xlsx) | Backlog con historias de usuario, fases y avance |
 
 ## Dependencias y justificación
@@ -135,10 +151,10 @@ Al cerrar una fase se sube `version` en `pyproject.toml` dentro de su PR y se cr
 
 ## Flujo de trabajo
 
-Cada fase se desarrolla en una rama `release/X.Y.Z`, con una rama por funcionalidad que se integra en ella. `main` solo avanza cuando la demo de la fase la valida. **Todo cambio entra por PR**: no hay `push` directo a `main` ni a las ramas de release. Ramas, PR, cierre de issues, promoción de releases y limitaciones: [CONTRIBUTING.md](CONTRIBUTING.md).
+Cada fase se desarrolla en una rama `release/X.Y.Z`, con una rama por funcionalidad que se integra en ella. `main` solo avanza cuando la demo de la fase la valida. **Todo cambio entra por PR**: no hay `push` directo a `main` ni a las ramas de release. Ramas, PR, cierre de issues, promoción de releases y limitaciones: [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md).
 
 ## Metodología
 
-- **TDD**: primero el test en rojo, luego el código mínimo y después el refactor.
+- **TDD**: primero el test en rojo, luego el código mínimo y después el refactor ([guía de pruebas](docs/TESTING.md)).
 - **Commits** en formato [Conventional Commits](https://www.conventionalcommits.org/es/v1.0.0/), con referencia al issue.
 - **Seguimiento** en el tablero GitHub Projects «TTX-247 Taxímetro» (una vista por fase) y en los issues del repositorio.

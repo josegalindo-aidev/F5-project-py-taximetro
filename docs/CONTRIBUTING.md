@@ -1,6 +1,6 @@
 <!--
 Proyecto: py-taximetro
-fuente: CONTRIBUTING.md
+fuente: docs/CONTRIBUTING.md
 -->
 
 # Guía de trabajo: ramas, PR y releases
@@ -81,7 +81,7 @@ GitHub solo cierra un issue por `Closes #n` cuando la PR llega a la **rama por d
 ## 5. Cerrar una fase: promoción a `main`
 
 1. La rama de release contiene todas las funcionalidades de la fase y sus pruebas pasan.
-2. **Subir la versión por PR**: una rama `chore/…` desde la release que cambie `version` en `pyproject.toml` y la tabla de versiones del [README](README.md#versionado), integrada con el flujo del apartado 3.
+2. **Subir la versión por PR**: una rama `chore/…` desde la release que cambie `version` en `pyproject.toml` y la tabla de versiones del [README](../README.md#versionado), integrada con el flujo del apartado 3.
 3. Hacer la **demo** desde la rama de release.
 4. **Registrar la demo y la entrega** en la hoja *Fases* del backlog, también por PR hacia la rama de release. Debe hacerse antes de promover: después solo se admiten PR a `main` con el método *Merge*.
 5. Abrir la PR de promoción `release/X.Y.Z` → `main`, con la plantilla de release. Desde la web, añadir `?template=release.md` a la URL de comparación. La plantilla lista los `Closes #n` de la fase.
@@ -127,7 +127,7 @@ Si aparece un error en lo ya entregado:
 
 ## 9. Versiones
 
-El criterio y el estado de las versiones están **solo** en el [README](README.md#versionado), y el número, en `pyproject.toml`. No se repiten en otros ficheros.
+El criterio y el estado de las versiones están **solo** en el [README](../README.md#versionado), y el número, en `pyproject.toml`. No se repiten en otros ficheros.
 
 ## 10. Cambiar las reglas del repositorio
 
