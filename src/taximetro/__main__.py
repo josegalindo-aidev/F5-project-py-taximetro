@@ -26,6 +26,10 @@ def default_rates_path(environ: Mapping[str, str]) -> Path:
     return PROJECT_ROOT / "config" / "rates.toml"
 
 
+def default_trips_path(environ: Mapping[str, str]) -> Path:
+    raise NotImplementedError
+
+
 def local_now() -> datetime:
     """Fecha y hora actuales en la zona horaria del ordenador."""
     return datetime.now().astimezone()
