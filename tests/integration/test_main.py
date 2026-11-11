@@ -2,6 +2,7 @@
 # fuente: tests/integration/test_main.py
 """Arranque del programa: conecta las tarifas del fichero con el servicio (US-07)."""
 
+import json
 from decimal import Decimal
 from pathlib import Path
 
@@ -87,6 +88,7 @@ def test_con_un_fichero_valido_lanza_la_cli_con_esas_tarifas_y_devuelve_0(tmp_pa
 
     code = main(
         path,
+        tmp_path / "trips.json",
         clock=clock,
         input_fn=ScriptedInput(clock, steps),
         output_fn=out.append,
@@ -94,3 +96,41 @@ def test_con_un_fichero_valido_lanza_la_cli_con_esas_tarifas_y_devuelve_0(tmp_pa
 
     assert code == 0
     assert "Total: 1,00 €" in "\n".join(out)  # 10 s parado a 0,10 EUR/s
+
+
+# TK-04: el programa real guarda las carreras en disco
+def run_one_trip(rates: Path, trips_path: Path | None) -> int:
+    clock = FakeClock()
+    steps = [(0, "iniciar"), (10, "finalizar"), (0, "salir")]
+    return main(
+        rates,
+        trips_path,
+        clock=clock,
+        input_fn=ScriptedInput(clock, steps),
+        output_fn=lambda _: None,
+    )
+
+
+def write_rates(tmp_path: Path) -> Path:
+    path = tmp_path / "rates.toml"
+    path.write_text('[rates]\nstopped = "0.10"\nmoving = "0.20"\n', encoding="utf-8")
+    return path
+
+
+def test_el_programa_guarda_la_carrera_finalizada_en_el_fichero_del_historial(tmp_path):
+    trips = tmp_path / "datos" / "trips.json"
+
+    code = run_one_trip(write_rates(tmp_path), trips)
+
+    assert code == 0
+    saved = json.loads(trips.read_text(encoding="utf-8"))
+    assert [record["total"] for record in saved] == ["1.00"]
+
+
+def test_sin_ruta_explicita_el_historial_va_donde_dice_la_variable(tmp_path, monkeypatch):
+    trips = tmp_path / "del-entorno.json"
+    monkeypatch.setenv("TAXIMETRO_TRIPS", str(trips))
+
+    run_one_trip(write_rates(tmp_path), None)
+
+    assert len(json.loads(trips.read_text(encoding="utf-8"))) == 1
