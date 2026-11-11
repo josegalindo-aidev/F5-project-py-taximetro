@@ -17,6 +17,7 @@ from taximetro.infra.tariff_loader import load_tariff
 from taximetro.ui.cli.app import Cli
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+TRIPS_FILENAME = "trips.json"
 
 
 def _path_from_environment(environ: Mapping[str, str], name: str, default: Path) -> Path:
@@ -30,13 +31,8 @@ def default_rates_path(environ: Mapping[str, str]) -> Path:
     return _path_from_environment(environ, "TAXIMETRO_RATES", default)
 
 
-def default_trips_path(environ: Mapping[str, str]) -> Path:
-    default = PROJECT_ROOT / "data" / "trips.json"
-    return _path_from_environment(environ, "TAXIMETRO_TRIPS", default)
-
-
 def default_data_dir(environ: Mapping[str, str]) -> Path:
-    raise NotImplementedError
+    return _path_from_environment(environ, "TAXIMETRO_DATA_DIR", PROJECT_ROOT / "data")
 
 
 def local_now() -> datetime:
@@ -55,14 +51,14 @@ def build_service(
 
 def main(
     rates_path: Path | None = None,
-    trips_path: Path | None = None,
+    data_dir: Path | None = None,
     *,
     clock: Clock = time.monotonic,
     input_fn: Callable[[str], str] = input,
     output_fn: Callable[[str], None] = print,
 ) -> int:
     path = rates_path or default_rates_path(os.environ)
-    repository = JsonTripRepository(trips_path or default_trips_path(os.environ))
+    repository = JsonTripRepository((data_dir or default_data_dir(os.environ)) / TRIPS_FILENAME)
     try:
         service = build_service(path, repository, clock)
         # Lee el historial una vez: si está dañado, se avisa ahora y no al cobrar una carrera.
