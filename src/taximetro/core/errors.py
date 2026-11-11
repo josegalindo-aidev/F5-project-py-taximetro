@@ -37,6 +37,10 @@ class InvalidTripRecord(TaximetroError):
     """La carrera no se puede guardar en el historial (sin terminar o sin fechas)."""
 
 
+class TripHistoryError(TaximetroError):
+    """El fichero del historial está dañado o no tiene el formato esperado."""
+
+
 class TripNotSaved(TaximetroError):
     """La carrera se cobró, pero no se pudo guardar en el historial."""
 
