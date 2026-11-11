@@ -1,6 +1,6 @@
 <!--
 Proyecto: py-taximetro
-fuente: docs/usage.md
+fuente: docs/USAGE.md
 -->
 
 # Manual de uso del taxímetro
@@ -218,4 +218,4 @@ Las tarifas configurables y el historial en disco, previstos para la Fase 2, ya 
 | 3 | Acceso con contraseña e interfaz gráfica con botones grandes para tablet |
 | 4 | API REST, panel web para el responsable de flota y despliegue con un único comando |
 
-Detalles técnicos y diseño: [docs/architecture.md](architecture.md).
+Detalles técnicos y diseño: [docs/ARCHITECTURE.md](ARCHITECTURE.md).
