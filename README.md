@@ -67,7 +67,9 @@ El programa muestra las instrucciones al arrancar y espera comandos:
 
 Tarifas (Zona EMT Madrid, junio 2025): **0,02 €/s** parado (o a menos de 20 km/h) y **0,05 €/s** en movimiento. El estado lo indicas tú con `parar` y `mover`. Las tarifas se leen de `config/rates.toml` al arrancar, así que se pueden cambiar sin tocar el código.
 
-Manual completo, con ejemplos, cómo configurar las tarifas y mensajes de error: [docs/usage.md](docs/usage.md).
+Cada carrera finalizada se guarda en un historial en disco, que se conserva al cerrar el programa. Al arrancar, el programa indica la ruta (`Historial: …`). La carpeta de datos se elige con la variable `TAXIMETRO_DATA_DIR` y, por defecto, es `data/` en la raíz del proyecto.
+
+Manual completo, con ejemplos, cómo configurar las tarifas y dónde se guardan los datos, y mensajes de error: [docs/usage.md](docs/usage.md).
 
 ## Pruebas y calidad
 
@@ -77,7 +79,7 @@ Todas las pruebas:
 python -m pytest
 ```
 
-Solo las **pruebas de aceptación** (US-01 a US-04, de principio a fin por la consola):
+Solo las **pruebas de aceptación** (US-01 a US-04 y el historial en disco, de principio a fin):
 
 ```bash
 python -m pytest tests/acceptance -v
@@ -101,11 +103,12 @@ Las pruebas se ejecutan siempre con `pytest`. Un fichero de tests no es un progr
 src/taximetro/
 ├── core/      Reglas de negocio puras: Tariff, Trip, TripService, errores y puertos
 ├── ui/cli/    Interfaz de línea de comandos
-├── infra/     Adaptadores externos: carga de tarifas (repositorios en las fases 2 a 4)
+├── infra/     Adaptadores externos: carga de tarifas y repositorios de carreras (memoria y JSON)
 └── __main__.py  Punto de arranque
 tests/         Pruebas unitarias, de integración, de aceptación y de convenciones
 docs/          Documentación y backlog
 config/        Tarifas (rates.toml)
+data/          Historial de carreras (trips.json); se crea al guardar la primera y Git lo ignora
 ```
 
 ## Documentación
