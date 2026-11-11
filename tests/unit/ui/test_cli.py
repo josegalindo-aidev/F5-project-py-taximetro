@@ -8,7 +8,7 @@ from taximetro.core.trip_service import TripService
 from taximetro.infra.repos.memory import InMemoryTripRepository
 from taximetro.ui.cli.app import Cli
 from taximetro.ui.cli.format import format_euros
-from tests.fakes import FakeClock, FakeWallClock, ScriptedInput
+from tests.fakes import BrokenRepository, FakeClock, FakeWallClock, ScriptedInput
 
 
 @pytest.fixture
@@ -16,10 +16,11 @@ def clock() -> FakeClock:
     return FakeClock()
 
 
-def run_cli(tariff, clock, steps) -> str:
+def run_cli(tariff, clock, steps, repository=None) -> str:
     """Ejecuta la CLI con una consola simulada y devuelve todo lo impreso."""
     out: list[str] = []
-    service = TripService(tariff, clock, FakeWallClock(), InMemoryTripRepository())
+    repository = repository if repository is not None else InMemoryTripRepository()
+    service = TripService(tariff, clock, FakeWallClock(), repository)
     Cli(service, input_fn=ScriptedInput(clock, steps), output_fn=out.append).run()
     return "\n".join(out)
 
@@ -98,3 +99,13 @@ def test_salir_con_carrera_en_curso_avisa(tariff, clock):
     out = run_cli(tariff, clock, [(0, "iniciar"), (0, "salir")])
     assert "La carrera en curso no se ha cobrado" in out
 
+
+# TK-04: si falla el guardado en el historial, el taxista ve igualmente el total
+def test_si_falla_el_guardado_se_muestra_el_total_y_un_aviso(tariff, clock):
+    steps = [(0, "iniciar"), (10, "finalizar")]
+
+    out = run_cli(tariff, clock, steps, repository=BrokenRepository())
+
+    assert "Carrera finalizada. Total: 0,20 €" in out
+    assert "Aviso: No se pudo guardar la carrera en el historial: disco lleno" in out
+    assert out.index("Total") < out.index("Aviso")  # primero el importe
