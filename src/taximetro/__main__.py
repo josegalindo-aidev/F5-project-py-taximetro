@@ -35,6 +35,10 @@ def default_trips_path(environ: Mapping[str, str]) -> Path:
     return _path_from_environment(environ, "TAXIMETRO_TRIPS", default)
 
 
+def default_data_dir(environ: Mapping[str, str]) -> Path:
+    raise NotImplementedError
+
+
 def local_now() -> datetime:
     """Fecha y hora actuales en la zona horaria del ordenador."""
     return datetime.now().astimezone()
