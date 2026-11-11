@@ -10,8 +10,9 @@ from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
 
-from taximetro.core.errors import InvalidTripRecord, TripHistoryError
+from taximetro.core.errors import TripHistoryError
 from taximetro.core.trip import Trip
+from taximetro.infra.repos.validation import ensure_can_be_saved
 
 
 class JsonTripRepository:
@@ -19,10 +20,7 @@ class JsonTripRepository:
         self._path = path
 
     def save(self, trip: Trip) -> None:
-        if not trip.is_finished:
-            raise InvalidTripRecord("No se puede guardar una carrera sin terminar.")
-        if trip.started_at is None or trip.finished_at is None:
-            raise InvalidTripRecord("No se puede guardar una carrera sin fechas.")
+        ensure_can_be_saved(trip)
         records = self._read()
         records.append(_to_record(trip))
         self._write(records)
