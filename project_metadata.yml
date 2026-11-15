@@ -1,0 +1,28 @@
+# =====================================================
+# PROJECT METADATA — Git Repository Manager
+# =====================================================
+repository: F5-project-py-taximetro
+provider: github
+ssh_alias: github-galindoaidev
+github_owner: josegalindo-aidev
+visibility: public
+
+description: Proyecto del bootcamp
+category: developer-tools
+status: active
+language: python
+
+created: 2026-10-11
+updated: 2026-11-13
+
+default_branch: main
+remote_name: origin
+
+git_identity:
+  name: Jose Galindo
+  email: 349737607+josegalindo-aidev@users.noreply.github.com
+
+tags:
+  - projecto-taximetro
+
+# git remote add origin git@{ssh_alias}:{github_owner}/{repository}.git
