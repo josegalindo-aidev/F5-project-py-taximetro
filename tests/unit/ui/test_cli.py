@@ -184,3 +184,14 @@ def test_historico_con_un_dia_lista_las_carreras_de_ese_dia(tariff, clock):
     assert "Total del día: 2 carreras, 104,99 €" in out
     assert "7,25" not in out
     assert "Comando desconocido" not in out
+
+
+def test_historico_de_un_dia_sin_carreras_nombra_ese_dia(tariff, clock):
+    repository = InMemoryTripRepository()
+    saved_trip(repository, "hoy", (11, 9, 5), (11, 9, 12), "7.25")  # solo hay carreras de hoy
+
+    out = run_cli(tariff, clock, [(0, "historico 2026-11-10")], repository)
+
+    assert "El 2026-11-10 no hubo carreras finalizadas." in out
+    assert "Hoy no hay" not in out
+    assert "Total del día" not in out
