@@ -12,7 +12,7 @@ from taximetro.core.errors import (
     TripNotStarted,
 )
 from taximetro.core.trip import State
-from taximetro.core.trip_service import TripService
+from taximetro.core.trip_service import TripService, TripStatus
 from taximetro.infra.repos.memory import InMemoryTripRepository
 from tests.fakes import (
     BrokenRepository,
@@ -194,6 +194,29 @@ def test_un_error_de_programacion_no_se_disfraza_de_fallo_de_guardado(tariff, cl
 
     with pytest.raises(InvalidTripRecord):
         service.finish()
+
+
+# TK-05: el estado de la carrera se entrega ya calculado, sin exponer la entidad
+def test_sin_carrera_en_curso_no_hay_estado(service):
+    assert service.status() is None
+
+
+def test_el_estado_de_la_carrera_trae_el_estado_y_el_importe_actual(service, clock):
+    service.start()
+    clock.advance(10)
+    assert service.status() == TripStatus(State.STOPPED, Decimal("0.20"))
+
+    service.set_state(State.MOVING)
+    clock.advance(10)
+    assert service.status() == TripStatus(State.MOVING, Decimal("0.70"))
+
+
+def test_al_finalizar_la_carrera_ya_no_hay_estado(service, clock):
+    service.start()
+    clock.advance(10)
+    service.finish()
+
+    assert service.status() is None
 
 
 # US-06: registro de eventos de operación
