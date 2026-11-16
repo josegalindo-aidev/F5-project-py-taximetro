@@ -24,6 +24,14 @@ packages = ["src/taximetro"]
 testpaths = ["tests"]
 addopts = "-ra --strict-markers"
 
+[tool.coverage.run]
+source = ["src/taximetro/core"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
+
 [tool.ruff]
 line-length = 100
 src = ["src", "tests"]
