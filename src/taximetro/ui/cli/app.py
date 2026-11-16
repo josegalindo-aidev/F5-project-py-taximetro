@@ -5,7 +5,9 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
+from datetime import date
 from decimal import Decimal
+from functools import partial
 
 from taximetro.core.errors import (
     InvalidTimestamp,
@@ -80,6 +82,9 @@ class Cli:
 
     def _dispatch(self, command: str) -> None:
         handler = self._commands.get(command)
+        name, _, argument = command.partition(" ")
+        if handler is None and name == "historico":  # único comando que admite un argumento
+            handler = partial(self._history, argument.strip())
         if handler is None:
             self._print(f"Comando desconocido: '{command}'. Escribe 'ayuda'.")
             return
@@ -113,12 +118,13 @@ class Cli:
             return
         self._print(f"Carrera finalizada. Total: {format_euros(total)}")
 
-    def _history(self) -> None:
-        trips = self._service.finished_on()
+    def _history(self, day_text: str = "") -> None:
+        day = date.fromisoformat(day_text) if day_text else None
+        trips = self._service.finished_on(day)
         if not trips:
             self._print("Hoy no hay carreras finalizadas.")
             return
-        self._print("Carreras de hoy:")
+        self._print(f"Carreras del {day}:" if day else "Carreras de hoy:")
         total = Decimal(0)
         for number, trip in enumerate(trips, start=1):
             start, end = f"{trip.started_at:%H:%M}", f"{trip.finished_at:%H:%M}"
