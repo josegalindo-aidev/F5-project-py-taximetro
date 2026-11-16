@@ -9,7 +9,7 @@ from collections.abc import Callable, Mapping
 from datetime import datetime
 from pathlib import Path
 
-from taximetro.core.errors import TariffFileError, TripHistoryError
+from taximetro.core.errors import EventLogError, TariffFileError, TripHistoryError
 from taximetro.core.ports import Clock, EventLog, TripRepository, WallClock
 from taximetro.core.trip_service import TripService
 from taximetro.infra.event_log import FileEventLog
@@ -71,7 +71,8 @@ def main(
         service = build_service(path, repository, event_log, clock)
         # Lee el historial una vez: si está dañado, se avisa ahora y no al cobrar una carrera.
         repository.list_finished(local_now().date())
-    except (TariffFileError, TripHistoryError) as error:
+        event_log.check()  # la auditoría es obligatoria: sin carpeta de logs usable no se arranca
+    except (TariffFileError, TripHistoryError, EventLogError) as error:
         print(f"Error: {error}", file=sys.stderr)
         return 1
     Cli(service, input_fn, output_fn, [f"Historial: {trips_file}"]).run()
