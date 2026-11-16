@@ -115,6 +115,9 @@ class Cli:
 
     def _history(self) -> None:
         trips = self._service.finished_on()
+        if not trips:
+            self._print("Hoy no hay carreras finalizadas.")
+            return
         self._print("Carreras de hoy:")
         total = Decimal(0)
         for number, trip in enumerate(trips, start=1):
