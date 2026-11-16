@@ -122,7 +122,10 @@ class Cli:
         day = date.fromisoformat(day_text) if day_text else None
         trips = self._service.finished_on(day)
         if not trips:
-            self._print("Hoy no hay carreras finalizadas.")
+            if day:
+                self._print(f"El {day} no hubo carreras finalizadas.")
+            else:
+                self._print("Hoy no hay carreras finalizadas.")
             return
         self._print(f"Carreras del {day}:" if day else "Carreras de hoy:")
         total = Decimal(0)
