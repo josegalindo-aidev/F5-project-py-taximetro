@@ -15,7 +15,13 @@ from taximetro.core.errors import (
 from taximetro.core.trip import State
 from taximetro.core.trip_service import TripService
 from taximetro.infra.repos.memory import InMemoryTripRepository
-from tests.fakes import BrokenRepository, FakeClock, FakeEventLog, FakeWallClock
+from tests.fakes import (
+    BrokenRepository,
+    FailingEventLog,
+    FakeClock,
+    FakeEventLog,
+    FakeWallClock,
+)
 
 
 @pytest.fixture
@@ -304,3 +310,35 @@ def test_si_no_se_puede_guardar_la_carrera_se_registra_el_motivo(
         "carrera_no_guardada",
         {"carrera": trip.id, "motivo": reason},
     )
+
+
+# Un fallo del registro de eventos nunca impide cobrar ni esconde el total
+def test_si_falla_el_registro_se_puede_iniciar_cambiar_de_estado_y_cobrar(
+    tariff, clock, wall_clock, repository
+):
+    service = TripService(tariff, clock, wall_clock, repository, FailingEventLog())
+
+    service.start()
+    clock.advance(10)
+    service.set_state(State.MOVING)
+    clock.advance(10)
+    total = service.finish()
+
+    assert total == Decimal("0.70")
+    assert service.active is None
+    assert [t.total for t in repository.list_finished(wall_clock.now.date())] == [Decimal("0.70")]
+
+
+def test_si_fallan_el_registro_y_el_historial_el_total_llega_en_trip_not_saved(
+    tariff, clock, wall_clock
+):
+    service = TripService(tariff, clock, wall_clock, BrokenRepository(), FailingEventLog())
+    service.start()
+    clock.advance(10)
+
+    with pytest.raises(TripNotSaved) as info:
+        service.finish()
+
+    assert info.value.total == Decimal("0.20")
+    assert "disco lleno" in str(info.value)  # el motivo es el del historial, no el del registro
+    assert service.active is None
