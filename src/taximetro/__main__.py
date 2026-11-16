@@ -66,7 +66,8 @@ def main(
     path = rates_path or default_rates_path(os.environ)
     trips_file = (data_dir or default_data_dir(os.environ)) / TRIPS_FILENAME
     repository = JsonTripRepository(trips_file)
-    event_log = FileEventLog(default_log_dir(os.environ))
+    log_dir = default_log_dir(os.environ)
+    event_log = FileEventLog(log_dir)
     try:
         service = build_service(path, repository, event_log, clock)
         # Lee el historial una vez: si está dañado, se avisa ahora y no al cobrar una carrera.
@@ -75,7 +76,7 @@ def main(
     except (TariffFileError, TripHistoryError, EventLogError) as error:
         print(f"Error: {error}", file=sys.stderr)
         return 1
-    Cli(service, input_fn, output_fn, [f"Historial: {trips_file}"]).run()
+    Cli(service, input_fn, output_fn, [f"Historial: {trips_file}", f"Logs: {log_dir}"]).run()
     return 0
 
 
