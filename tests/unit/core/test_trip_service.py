@@ -273,3 +273,34 @@ def test_al_finalizar_la_carrera_se_registra_el_total_con_la_hora_de_fin(
         "carrera_finalizada",
         {"carrera": trip.id, "total": "0.70"},
     )
+
+
+@pytest.mark.parametrize(
+    ("repository", "reason"),
+    [
+        (BrokenRepository(), "disco lleno"),
+        (DamagedHistoryRepository(), "El historial 'trips.json' está dañado"),
+    ],
+    ids=["fallo-de-disco", "historial-danado"],
+)
+def test_si_no_se_puede_guardar_la_carrera_se_registra_el_motivo(
+    tariff, clock, wall_clock, event_log, repository, reason
+):
+    service = TripService(tariff, clock, wall_clock, repository, event_log)
+    trip = service.start()
+    clock.advance(10)
+    wall_clock.advance(10)
+
+    with pytest.raises(TripNotSaved):
+        service.finish()
+
+    assert [name for _, name, _ in event_log.events] == [
+        "carrera_iniciada",
+        "carrera_finalizada",
+        "carrera_no_guardada",
+    ]
+    assert event_log.events[-1] == (
+        wall_clock.now,
+        "carrera_no_guardada",
+        {"carrera": trip.id, "motivo": reason},
+    )
