@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import datetime
 from decimal import Decimal
 from uuid import uuid4
 
@@ -69,12 +69,6 @@ class TripService:
             self._log(now, "carrera_no_guardada", carrera=trip.id, motivo=str(error))
             raise TripNotSaved(total, str(error)) from error
         return total
-
-    def today(self) -> date:
-        return self._wall_clock().date()
-
-    def finished_on(self, day: date | None = None) -> list[Trip]:
-        return self._repository.list_finished(day or self.today())
 
     def _log(self, at: datetime, event: str, **data: str) -> None:
         """Registra un evento; si el registro falla, se ignora: cobrar es lo primero."""
