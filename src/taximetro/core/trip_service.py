@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from uuid import uuid4
@@ -17,6 +18,14 @@ from taximetro.core.errors import (
 from taximetro.core.ports import Clock, EventLog, TripRepository, WallClock
 from taximetro.core.tariff import Tariff
 from taximetro.core.trip import State, Trip
+
+
+@dataclass(frozen=True)
+class TripStatus:
+    """Cómo va la carrera en curso: lo que una interfaz necesita para mostrarla."""
+
+    state: State
+    amount: Decimal
 
 
 class TripService:
@@ -53,6 +62,9 @@ class TripService:
         trip = self._require_active()
         trip.change_state(state, at=self._clock())
         self._log(self._wall_clock(), "estado_cambiado", carrera=trip.id, estado=state.value)
+
+    def status(self) -> TripStatus | None:
+        raise NotImplementedError
 
     def current_amount(self) -> Decimal:
         return self._require_active().amount_at(self._clock())
