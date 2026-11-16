@@ -12,6 +12,7 @@ from pathlib import Path
 
 from taximetro.core.errors import TripHistoryError
 from taximetro.core.trip import Trip
+from taximetro.infra.folders import file_in_the_way
 from taximetro.infra.repos.validation import ensure_can_be_saved
 
 
@@ -57,13 +58,11 @@ class JsonTripRepository:
 
     def _check_folder(self) -> None:
         """La carpeta de datos, o la primera que exista por encima, debe ser una carpeta."""
-        for folder in self._path.parents:
-            if folder.exists():
-                if not folder.is_dir():
-                    raise TripHistoryError(
-                        f"La carpeta de datos '{folder}' no es una carpeta: es un fichero."
-                    )
-                return
+        blocking_file = file_in_the_way(self._path.parent)
+        if blocking_file is not None:
+            raise TripHistoryError(
+                f"La carpeta de datos '{blocking_file}' no es una carpeta: es un fichero."
+            )
 
     def _write(self, records: list[dict]) -> None:
         """Escribe en un temporal y lo intercambia: el fichero nunca queda a medias."""

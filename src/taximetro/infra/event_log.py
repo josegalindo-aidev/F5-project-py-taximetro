@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 
 from taximetro.core.errors import EventLogError
+from taximetro.infra.folders import file_in_the_way
 
 
 class FileEventLog:
@@ -18,12 +19,11 @@ class FileEventLog:
 
     def check(self) -> None:
         """Comprueba que la carpeta existe (la crea) y que se puede escribir en ella."""
-        for folder in (self._directory, *self._directory.parents):
-            if folder.exists():
-                if not folder.is_dir():
-                    message = f"La carpeta de logs '{folder}' no es una carpeta: es un fichero."
-                    raise EventLogError(message)
-                break
+        blocking_file = file_in_the_way(self._directory)
+        if blocking_file is not None:
+            raise EventLogError(
+                f"La carpeta de logs '{blocking_file}' no es una carpeta: es un fichero."
+            )
         try:
             self._directory.mkdir(parents=True, exist_ok=True)
             with tempfile.TemporaryFile(dir=self._directory):
