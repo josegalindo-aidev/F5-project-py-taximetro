@@ -63,6 +63,13 @@ class FakeEventLog:
         self.events.append((at, event, data))
 
 
+class FailingEventLog:
+    """Registro de eventos cuya escritura siempre falla (disco lleno, fichero bloqueado...)."""
+
+    def record(self, at: datetime, event: str, **data: str) -> None:
+        raise OSError("disco del registro lleno")
+
+
 class ScriptedInput:
     """Consola simulada: cada paso (segundos, comando) avanza el reloj y devuelve el comando."""
 
