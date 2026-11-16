@@ -8,7 +8,7 @@ fuente: docs/ARCHITECTURE.md
 | | |
 |---|---|
 | **Proyecto** | py-taximetro (prototipo de TaxiTech Solutions S.L.) |
-| **Alcance que refleja** | Fase 1 (MVP CLI): US-01 a US-04 y TK-02, más de la Fase 2: US-07 (tarifas en fichero de configuración), TK-04 (historial de carreras en disco), US-05 (histórico del día) y US-06 (logs de operación) |
+| **Alcance que refleja** | Fase 1 (MVP CLI): US-01 a US-04 y TK-02, más de la Fase 2: US-07 (tarifas en fichero de configuración), TK-04 (historial de carreras en disco), US-05 (histórico del día) y US-06 (logs de operación) y TK-03 (umbral de cobertura del núcleo) |
 | **Fuente de verdad** | El código en `src/taximetro/`. Si algo de este documento y el código difieren, manda el código. |
 
 > **Convención de estado.** Cada elemento lleva una marca: ✅ implementado y probado, 🟡 existe pero aún no se usa, ⏳ planificado (no existe todavía).
@@ -318,6 +318,7 @@ Un tramo termina en cada cambio de estado o al finalizar. Ejemplo (10 s parado, 
 | **TK-04** (#14) | Historial guardado en disco | `JsonTripRepository`, `ensure_can_be_saved`, `TripService.finish`, `Trip.restore`, `default_data_dir`, `main` | `test_las_carreras_terminadas_se_conservan_al_reiniciar_el_programa` y el resto de `test_fase2_historial.py` |
 | **US-05** (#6) | Ver el histórico del día (o de otro día) | `Cli._history`, `Cli._dispatch`, `TripService.finished_on` y `today`, `TripRepository.list_finished` | `test_us05_el_historico_del_dia_conserva_las_carreras_al_reiniciar` y el resto de `test_us05_historico.py` |
 | **US-06** (#7) | Logs de operación | `EventLog`, `FileEventLog`, `TripService._log`, `default_log_dir`, `main` | `test_us06_una_carrera_deja_inicio_cambio_de_estado_y_fin_con_marca_de_tiempo` y el resto de `test_us06_logs.py` |
+| **TK-03** (#13) | Tests automatizados de la lógica de cálculo (cobertura ≥ 90 % en `core/`) | `[tool.coverage]` de `pyproject.toml` | `tests/test_quality_gates.py` y `python -m pytest --cov` |
 | — | Consulta del importe en curso (`estado`) | `Cli._status`, `TripService.current_amount`, `Trip.amount_at` | `test_estado_con_carrera_muestra_estado_e_importe` |
 
 ### 4.3 Ciclo de vida de una carrera
@@ -445,6 +446,7 @@ Con `time.monotonic` el reloj no retrocede, y `TripService` descarta la carrera 
 | D20 | **El registro de eventos es un puerto propio (`EventLog`)**, con la hora del reloj de pared inyectado, y no el módulo `logging` de Python. | La marca de tiempo es determinista en las pruebas, no hay configuración global compartida y se prueba con el mismo estilo que el resto (doble de pruebas, mutación). |
 | D21 | **Formato JSON Lines, un fichero por día**; nombres de evento en español y estado con el valor interno (`stopped`, `moving`). | Una línea por evento se lee y se filtra con herramientas, no se corrompe si el programa se corta, y el formato de datos no depende del idioma de la consola. |
 | D22 | **Un fallo del registro nunca impide cobrar, pero una carpeta de logs inservible impide arrancar.** | Cobrar es lo primero durante la jornada; pero los logs existen para auditar, y arrancar sin poder auditar vaciaría su propósito. |
+| D23 | **La cobertura del núcleo tiene un umbral del 90 %**, con ramas, configurado en `pyproject.toml`, y un test impide relajarlo. | El criterio de TK-03 se cumple hoy con un 100 %, pero solo un umbral que falla evita que baje sin que nadie lo note, y el núcleo es donde está el negocio. |
 
 ---
 
@@ -457,14 +459,15 @@ El proyecto se desarrolla con **TDD**: primero el test en rojo, luego el código
 | Unitarias del núcleo | `tests/unit/core/` | `Tariff`, `Trip` y `TripService` aislados | 51 |
 | Unitarias de la CLI | `tests/unit/ui/` | `Cli` y `format_euros` con consola simulada | 30 |
 | Aceptación | `tests/acceptance/` | US-01 a US-04 (4), el historial en disco, TK-04 (3), el histórico del día, US-05 (4), y los logs, US-06 (4), de principio a fin | 15 |
-| Convenciones | `tests/test_conventions.py` | Cabecera de cada `.py` (crece con cada fichero nuevo) | 63 |
+| Convenciones | `tests/test_conventions.py` | Cabecera de cada `.py` (crece con cada fichero nuevo) | 65 |
+| Calidad | `tests/test_quality_gates.py` | Umbral de cobertura del núcleo en `pyproject.toml` (TK-03) | 3 |
 | Integración | `tests/integration/` | Cargador de tarifas (30), repositorio JSON (19), registro de eventos (7) y arranque (25), con ficheros temporales | 81 |
 | Contrato | `tests/contract/` | La misma batería de 9 tests para el repositorio en memoria y el JSON | 18 |
-| | | **Total** | **258** |
+| | | **Total** | **263** |
 
 **Dobles de prueba** (`tests/fakes.py`): `FakeClock` (reloj que avanza a mano), `FakeWallClock` (reloj de pared controlable), `FakeEventLog` (registro de eventos en memoria), `FailingEventLog` (registro cuya escritura siempre falla), `BrokenRepository` (guardado que siempre falla), `UnreadableHistoryRepository` (consultar el historial siempre falla) y `ScriptedInput` (consola que devuelve comandos y avanza el reloj entre ellos). Los fixtures compartidos están en `tests/conftest.py`.
 
-**Cobertura:** 99 % al cerrar US-06. Todos los módulos están al 100 % salvo `__main__.py`, cuya única línea sin cubrir es la llamada `raise SystemExit(main())` del bloque `if __name__ == "__main__"`.
+**Cobertura:** 99 % al cerrar US-06. Todos los módulos están al 100 % salvo `__main__.py`, cuya única línea sin cubrir es la llamada `raise SystemExit(main())` del bloque `if __name__ == "__main__"`. El **núcleo** (`core/`) está al **100 %** en líneas y ramas, y `pyproject.toml` exige un mínimo del **90 %**: `python -m pytest --cov` falla si baja (decisión D23).
 
 **Pruebas de mutación manuales:** el cargador y el arranque se comprobaron rompiendo el código a propósito (quitar una validación, cambiar un mensaje, alterar el orden de los `except`…). Los tests detectaron todas las roturas deliberadas que se probaron al cerrar US-07. Al cerrar TK-04 se repitió sobre el repositorio JSON, el arranque, `TripService`, la CLI y la validación común: 26 mutantes, 26 detectados. Al cerrar US-05 y US-06 se repitió con el histórico y el registro de eventos: de 41 mutantes, 39 se detectaron a la primera y los dos supervivientes llevaron a eliminar código muerto y a cubrir un hueco de pruebas.
 
@@ -509,6 +512,10 @@ python -m pytest -v
 ```
 
 ```bash
+python -m pytest --cov
+```
+
+```bash
 python -m pytest --cov=src/taximetro --cov-report=term-missing
 ```
 
@@ -522,7 +529,7 @@ python -m ruff check src tests
 
 | Fase | Módulos nuevos o cambios | Issues |
 |---|---|---|
-| **Fase 2** — Observabilidad y persistencia | `infra/repos/` (memoria y JSON) implementando `TripRepository` y `event_log.py` implementando `EventLog`. **Ya hecho:** cargador de tarifas desde `config/rates.toml` (US-07), repositorio JSON del historial con la carpeta de datos (TK-04), comando `historico` con el día como argumento (US-05) y registro de eventos de operación en la carpeta `TAXIMETRO_LOG_DIR` (US-06). **Pendiente:** la medición de cobertura del núcleo (TK-03) | US-05 (#6), US-06 (#7), US-07 (#8), TK-03 (#13), TK-04 (#14) |
+| **Fase 2** — Observabilidad y persistencia | `infra/repos/` (memoria y JSON) implementando `TripRepository` y `event_log.py` implementando `EventLog`. **Ya hecho:** cargador de tarifas desde `config/rates.toml` (US-07), repositorio JSON del historial con la carpeta de datos (TK-04), comando `historico` con el día como argumento (US-05) y registro de eventos de operación en la carpeta `TAXIMETRO_LOG_DIR` (US-06) y umbral de cobertura del 90 % para el núcleo (TK-03). **Pendiente:** la promoción a `main` | US-05 (#6), US-06 (#7), US-07 (#8), TK-03 (#13), TK-04 (#14) |
 | **Fase 3** — Arquitectura y UI | Refuerzo de la POO y de las responsabilidades; acceso con contraseña (hash, sin texto plano); `ui/gui/` en tkinter sin bloquear la ventana | US-08 (#9), US-09 (#10), TK-05 (#15) |
 | **Fase 4** — Producción | Repositorio SQL; `ui/api/` (API REST: iniciar, cambiar, finalizar, consultar); panel web para el responsable de flota; despliegue con un único comando (Docker) | TK-06 (#16), TK-07 (#17), TK-08 (#18), TK-09 (#19) |
 | **Transversal** | README con instrucciones y justificación de librerías; tablero y Conventional Commits | TK-10 (#20), TK-11 (#21) |

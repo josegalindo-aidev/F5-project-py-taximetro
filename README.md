@@ -85,7 +85,13 @@ Solo las **pruebas de aceptación** (cada historia de usuario, de principio a fi
 python -m pytest tests/acceptance -v
 ```
 
-Cobertura y calidad del código:
+Cobertura del **núcleo** (`core/`), con un mínimo del 90 %: si baja, el comando falla:
+
+```bash
+python -m pytest --cov
+```
+
+Cobertura de todo el proyecto y calidad del código:
 
 ```bash
 python -m pytest --cov=src/taximetro --cov-report=term-missing

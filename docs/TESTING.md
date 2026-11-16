@@ -37,6 +37,7 @@ El ciclo es **rojo, verde, refactor**, con **un solo test cada vez**:
 | **Aceptación** | `tests/acceptance/` | Cada historia de usuario **de principio a fin** por la consola, con el nombre `test_usNN_…`. Las de la Fase 2 arrancan `main` entero sobre una carpeta de datos temporal (`test_fase2_historial.py`, `test_us05_historico.py`, `test_us06_logs.py`), con las utilidades comunes en `tests/acceptance/helpers.py` |
 | Contrato | `tests/contract/` | Reglas que debe cumplir **cualquier implementación** de un puerto: el repositorio en memoria y el JSON pasan la misma batería (apartado 5) |
 | Convenciones | `tests/test_conventions.py` | Reglas del repositorio, como la cabecera de los `.py` |
+| Calidad | `tests/test_quality_gates.py` | Umbrales de calidad: la cobertura mínima del núcleo, configurada en `pyproject.toml` |
 
 Las pruebas de aceptación son las más valiosas al cambiar el comportamiento visible: si una historia deja de cumplirse, fallan.
 
@@ -86,11 +87,21 @@ Ver en qué orden se preparan los *fixtures* de un test:
 python -m pytest tests/unit/core/test_trip_service.py --setup-show -q
 ```
 
-Cobertura y estilo:
+Cobertura del **núcleo** (`core/`). Falla, con código de salida 1, si baja del 90 % (TK-03):
+
+```bash
+python -m pytest --cov
+```
+
+Cobertura de todo el proyecto y estilo:
 
 ```bash
 python -m pytest --cov=src/taximetro --cov-report=term-missing
 ```
+
+La cobertura se configura en `[tool.coverage]` de `pyproject.toml`: se mide `src/taximetro/core`, se cuentan también las **ramas** (un `if` cuyo camino «no» nunca se ejecuta cuenta como sin cubrir) y el mínimo es `fail_under = 90`. `tests/test_quality_gates.py` falla si alguien baja el umbral, quita las ramas o cambia lo que se mide.
+
+Ejecutar `--cov` con **un solo fichero de tests** dará una cobertura baja y fallará: es lo esperado, porque el umbral se refiere a la suite completa.
 
 ```bash
 python -m ruff check src tests
@@ -175,7 +186,7 @@ Un script de mutación fiable cumple estas reglas:
 3. **El resultado se cuenta, no se estima**: el propio script imprime «N de M detectados» y los supervivientes.
 4. **Se ejecuta con `-x`** (parar en el primer fallo): basta un test en rojo para dar el mutante por detectado.
 
-Al cerrar TK-04 se probaron 26 mutantes sobre el repositorio JSON, el arranque, `TripService`, la CLI y la validación común, y los 26 fueron detectados. Es una comprobación de las decisiones que más importan, no una cobertura exhaustiva.
+Al cerrar TK-04 se probaron 26 mutantes sobre el repositorio JSON, el arranque, `TripService`, la CLI y la validación común, y los 26 fueron detectados. Es una comprobación de las decisiones que más importan, no una cobertura exhaustiva. Después, con el histórico del día y los logs de operación, se repitió con 41 mutantes más: 39 se detectaron a la primera, y los dos supervivientes llevaron a eliminar código muerto y a cubrir un hueco de pruebas (la escritura dentro de la carpeta de logs).
 
 ## 7. Convenciones de los tests
 
