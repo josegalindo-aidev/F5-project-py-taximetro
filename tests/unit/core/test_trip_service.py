@@ -231,3 +231,21 @@ def test_al_iniciar_la_carrera_se_registra_el_evento_con_su_hora_e_identificador
     trip = service.start()
 
     assert event_log.events == [(wall_clock.now, "carrera_iniciada", {"carrera": trip.id})]
+
+
+def test_cada_cambio_de_estado_se_registra_con_el_estado_nuevo(
+    service, clock, wall_clock, event_log
+):
+    trip = service.start()
+    clock.advance(5)
+    wall_clock.advance(5)
+    service.set_state(State.MOVING)
+    moving_at = wall_clock.now
+    clock.advance(3)
+    wall_clock.advance(3)
+    service.set_state(State.STOPPED)
+
+    assert event_log.events[1:] == [
+        (moving_at, "estado_cambiado", {"carrera": trip.id, "estado": "moving"}),
+        (wall_clock.now, "estado_cambiado", {"carrera": trip.id, "estado": "stopped"}),
+    ]
