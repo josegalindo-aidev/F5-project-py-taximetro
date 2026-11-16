@@ -249,3 +249,27 @@ def test_cada_cambio_de_estado_se_registra_con_el_estado_nuevo(
         (moving_at, "estado_cambiado", {"carrera": trip.id, "estado": "moving"}),
         (wall_clock.now, "estado_cambiado", {"carrera": trip.id, "estado": "stopped"}),
     ]
+
+
+def test_al_finalizar_la_carrera_se_registra_el_total_con_la_hora_de_fin(
+    service, clock, wall_clock, event_log
+):
+    trip = service.start()
+    clock.advance(10)
+    wall_clock.advance(10)
+    service.set_state(State.MOVING)
+    clock.advance(10)
+    wall_clock.advance(10)
+    total = service.finish()
+
+    assert total == Decimal("0.70")
+    assert [name for _, name, _ in event_log.events] == [
+        "carrera_iniciada",
+        "estado_cambiado",
+        "carrera_finalizada",
+    ]
+    assert event_log.events[-1] == (
+        wall_clock.now,
+        "carrera_finalizada",
+        {"carrera": trip.id, "total": "0.70"},
+    )
