@@ -4,13 +4,17 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
+from datetime import date
+from decimal import Decimal
+from functools import partial
 
 from taximetro.core.errors import (
     InvalidTimestamp,
     TaximetroError,
     TripAlreadyFinished,
     TripAlreadyStarted,
+    TripNotSaved,
     TripNotStarted,
 )
 from taximetro.core.state import State
@@ -23,6 +27,7 @@ HELP = """Comandos disponibles:
   mover      El taxi está en movimiento
   estado     Muestra el estado y el importe actual
   finalizar  Termina la carrera y muestra el total
+  historico  Muestra las carreras de hoy, o de un día: historico AAAA-MM-DD
   ayuda      Muestra esta ayuda
   salir      Cierra el programa"""
 
@@ -42,10 +47,12 @@ class Cli:
         service: TripService,
         input_fn: Callable[[str], str] = input,
         output_fn: Callable[[str], None] = print,
+        notes: Sequence[str] = (),
     ) -> None:
         self._service = service
         self._input = input_fn
         self._print = output_fn
+        self._notes = notes
         self._commands: dict[str, Callable[[], None]] = {
             "iniciar": self._start,
             "parar": lambda: self._set_state(State.STOPPED),
@@ -57,6 +64,8 @@ class Cli:
 
     def run(self) -> None:
         self._print("Taxímetro digital TTX-247")
+        for note in self._notes:
+            self._print(note)
         self._print(HELP)
         while True:
             try:
@@ -73,6 +82,9 @@ class Cli:
 
     def _dispatch(self, command: str) -> None:
         handler = self._commands.get(command)
+        name, _, argument = command.partition(" ")
+        if handler is None and name == "historico":  # único comando que admite un argumento
+            handler = partial(self._history, argument.strip())
         if handler is None:
             self._print(f"Comando desconocido: '{command}'. Escribe 'ayuda'.")
             return
@@ -98,8 +110,35 @@ class Cli:
         self._print(f"Estado: {STATE_LABEL[trip.state]} - Importe actual: {amount}")
 
     def _finish(self) -> None:
-        total = self._service.finish()
+        try:
+            total = self._service.finish()
+        except TripNotSaved as error:
+            self._print(f"Carrera finalizada. Total: {format_euros(error.total)}")
+            self._print(f"Aviso: {error}")
+            return
         self._print(f"Carrera finalizada. Total: {format_euros(total)}")
+
+    def _history(self, day_text: str = "") -> None:
+        try:
+            day = date.fromisoformat(day_text) if day_text else None
+        except ValueError:
+            self._print(f"Fecha no válida: '{day_text}'. Usa el formato AAAA-MM-DD.")
+            return
+        trips = self._service.finished_on(day)
+        if not trips:
+            if day:
+                self._print(f"El {day} no hubo carreras finalizadas.")
+            else:
+                self._print("Hoy no hay carreras finalizadas.")
+            return
+        self._print(f"Carreras del {day}:" if day else "Carreras de hoy:")
+        total = Decimal(0)
+        for number, trip in enumerate(trips, start=1):
+            start, end = f"{trip.started_at:%H:%M}", f"{trip.finished_at:%H:%M}"
+            self._print(f"  {number}. {start} - {end}  {format_euros(trip.total)}")
+            total += trip.total
+        word = "carrera" if len(trips) == 1 else "carreras"
+        self._print(f"Total del día: {len(trips)} {word}, {format_euros(total)}")
 
     def _goodbye(self) -> None:
         if self._service.active is not None:

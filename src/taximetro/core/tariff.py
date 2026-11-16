@@ -24,7 +24,3 @@ class Tariff:
 
     def rate_for(self, state: State) -> Decimal:
         return self.moving if state is State.MOVING else self.stopped
-
-
-# Zona EMT Madrid (junio 2025). Pasará a un fichero de configuración en la Fase 2 (US-07).
-DEFAULT_TARIFF = Tariff(stopped=Decimal("0.02"), moving=Decimal("0.05"))

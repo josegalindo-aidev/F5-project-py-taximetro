@@ -2,6 +2,23 @@
 # fuente: tests/fakes.py
 """Dobles de test compartidos."""
 
+from datetime import UTC, datetime, timedelta
+
+from taximetro.core.errors import TripHistoryError
+
+
+class FakeWallClock:
+    """Reloj de pared controlable: cumple el puerto `WallClock`."""
+
+    def __init__(self, now: datetime | None = None) -> None:
+        self.now = now or datetime(2026, 11, 11, 10, 0, 0, tzinfo=UTC)
+
+    def __call__(self) -> datetime:
+        return self.now
+
+    def advance(self, seconds: float) -> None:
+        self.now += timedelta(seconds=seconds)
+
 
 class FakeClock:
     """Reloj controlable: cumple el puerto `Clock`."""
@@ -14,6 +31,43 @@ class FakeClock:
 
     def advance(self, seconds: float) -> None:
         self.t += seconds
+
+
+class BrokenRepository:
+    """Repositorio cuyo guardado siempre falla (disco lleno, fichero bloqueado...)."""
+
+    def save(self, trip):
+        raise OSError("disco lleno")
+
+    def list_finished(self, day):
+        return []
+
+
+class UnreadableHistoryRepository:
+    """Repositorio cuyo historial no se puede leer: consultarlo siempre falla."""
+
+    def save(self, trip):
+        pass
+
+    def list_finished(self, day):
+        raise TripHistoryError("El historial 'trips.json' está dañado: no se puede leer")
+
+
+class FakeEventLog:
+    """Registro de eventos en memoria: cumple el puerto `EventLog`."""
+
+    def __init__(self) -> None:
+        self.events: list[tuple[datetime, str, dict]] = []
+
+    def record(self, at: datetime, event: str, **data: str) -> None:
+        self.events.append((at, event, data))
+
+
+class FailingEventLog:
+    """Registro de eventos cuya escritura siempre falla (disco lleno, fichero bloqueado...)."""
+
+    def record(self, at: datetime, event: str, **data: str) -> None:
+        raise OSError("disco del registro lleno")
 
 
 class ScriptedInput:

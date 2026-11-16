@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "taximetro"
-version = "0.1.0"
+version = "0.2.0"
 description = "Taxímetro digital (TTX-247) - prototipo de TaxiTech Solutions"
 requires-python = ">=3.11"
 dependencies = []
@@ -24,9 +24,17 @@ packages = ["src/taximetro"]
 testpaths = ["tests"]
 addopts = "-ra --strict-markers"
 
+[tool.coverage.run]
+source = ["src/taximetro/core"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
+
 [tool.ruff]
 line-length = 100
 src = ["src", "tests"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B"]
+select = ["E", "F", "W", "I", "UP", "B"]

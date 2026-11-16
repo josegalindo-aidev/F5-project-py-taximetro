@@ -9,12 +9,14 @@ Prototipo de taxímetro 100 % software para **TaxiTech Solutions S.L.**, que sus
 
 Proyecto del bootcamp de Factoría F5, desarrollado con **TDD** y una arquitectura modular.
 
+**Fuente del ejercicio:** [Factoria-F5-madrid/project-py-taximetro](https://github.com/Factoria-F5-madrid/project-py-taximetro), con el enunciado, las fases de entrega y los requisitos.
+
 ## Estado del proyecto
 
 | Fase | Contenido | Estado |
 |---|---|---|
 | **1 · MVP CLI** | Iniciar, cambiar de estado y finalizar carreras desde la consola; encadenar carreras | ✅ Implementada |
-| 2 · Observabilidad y persistencia | Logs, historial en disco, tarifas en fichero, histórico del día | ⏳ Planificada |
+| 2 · Observabilidad y persistencia | Logs de operación, historial en disco, histórico del día, tarifas en fichero y umbral de cobertura | ✅ Implementada |
 | 3 · Arquitectura y UI | Acceso con contraseña e interfaz gráfica para tablet | ⏳ Planificada |
 | 4 · Producción | Base de datos, API REST, panel web y despliegue con un comando | ⏳ Planificada |
 
@@ -63,15 +65,33 @@ El programa muestra las instrucciones al arrancar y espera comandos:
 | `ayuda` | Repite las instrucciones |
 | `salir` | Cierra el programa |
 
-Tarifas (Zona EMT Madrid, junio 2025): **0,02 €/s** parado (o a menos de 20 km/h) y **0,05 €/s** en movimiento. El estado lo indicas tú con `parar` y `mover`.
+Tarifas (Zona EMT Madrid, junio 2025): **0,02 €/s** parado (o a menos de 20 km/h) y **0,05 €/s** en movimiento. El estado lo indicas tú con `parar` y `mover`. Las tarifas se leen de `config/rates.toml` al arrancar, así que se pueden cambiar sin tocar el código.
 
-Manual completo, con ejemplos y mensajes de error: [docs/usage.md](docs/usage.md).
+Cada carrera finalizada se guarda en un historial en disco, que se conserva al cerrar el programa. Al arrancar, el programa indica la ruta del historial (`Historial: …`) y la de los logs (`Logs: …`). La carpeta de datos se elige con la variable `TAXIMETRO_DATA_DIR` y, por defecto, es `data/` en la raíz del proyecto. El inicio, los cambios de estado y el fin de cada carrera se registran, con su hora, en la carpeta de logs (`TAXIMETRO_LOG_DIR`, por defecto `logs/`) para poder auditar el uso.
+
+Manual completo, con ejemplos, cómo configurar las tarifas y dónde se guardan los datos, y mensajes de error: [docs/USAGE.md](docs/USAGE.md).
 
 ## Pruebas y calidad
+
+Todas las pruebas:
 
 ```bash
 python -m pytest
 ```
+
+Solo las **pruebas de aceptación** (cada historia de usuario, de principio a fin):
+
+```bash
+python -m pytest tests/acceptance -v
+```
+
+Cobertura del **núcleo** (`core/`), con un mínimo del 90 %: si baja, el comando falla:
+
+```bash
+python -m pytest --cov
+```
+
+Cobertura de todo el proyecto y calidad del código:
 
 ```bash
 python -m pytest --cov=src/taximetro --cov-report=term-missing
@@ -81,25 +101,31 @@ python -m pytest --cov=src/taximetro --cov-report=term-missing
 python -m ruff check src tests
 ```
 
+Las pruebas se ejecutan siempre con `pytest`. Un fichero de tests no es un programa: `python -m` sobre él no ejecuta ninguna prueba, termina en silencio y con código 0, aunque alguna fallara. Más ejemplos (un fichero, un test por nombre) y cómo se escriben las pruebas: [docs/TESTING.md](docs/TESTING.md).
+
 ## Estructura
 
 ```
 src/taximetro/
 ├── core/      Reglas de negocio puras: Tariff, Trip, TripService, errores y puertos
 ├── ui/cli/    Interfaz de línea de comandos
-├── infra/     Adaptadores externos (reservado para las fases 2 a 4)
+├── infra/     Adaptadores externos: carga de tarifas y repositorios de carreras (memoria y JSON)
 └── __main__.py  Punto de arranque
-tests/         Pruebas unitarias, de aceptación y de convenciones
+tests/         Pruebas unitarias, de integración, de aceptación y de convenciones
 docs/          Documentación y backlog
-config/        Tarifas (rates.toml; se leerán en la Fase 2)
+config/        Tarifas (rates.toml)
+data/          Historial de carreras (trips.json); se crea al guardar la primera y Git lo ignora
+logs/          Logs de operación, un fichero por día; se crea al arrancar y Git lo ignora
 ```
 
 ## Documentación
 
 | Documento | Contenido |
 |---|---|
-| [docs/usage.md](docs/usage.md) | Manual de uso del taxímetro |
-| [docs/architecture.md](docs/architecture.md) | Arquitectura, módulos y decisiones de diseño |
+| [docs/USAGE.md](docs/USAGE.md) | Manual de uso del taxímetro |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Arquitectura, módulos y decisiones de diseño |
+| [docs/TESTING.md](docs/TESTING.md) | Cómo se prueba el proyecto: TDD, niveles de prueba, ejecución y mutaciones |
+| [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | Flujo de trabajo: ramas, PR, commits y releases |
 | [docs/project_backlog.xlsx](docs/project_backlog.xlsx) | Backlog con historias de usuario, fases y avance |
 
 ## Dependencias y justificación
@@ -127,7 +153,7 @@ Se sigue el [versionado semántico](https://semver.org/lang/es/) (`MAJOR.MINOR.P
 | Fase | Versión | Estado |
 |---|---|---|
 | 1 · MVP CLI | `0.1.0` | ✅ [Publicada](https://github.com/josegalindo-aidev/F5-project-py-taximetro/releases/tag/v0.1.0) |
-| 2 · Observabilidad y persistencia | `0.2.0` | ⏳ Planificada |
+| 2 · Observabilidad y persistencia | `0.2.0` | ✅ [Publicada](https://github.com/josegalindo-aidev/F5-project-py-taximetro/releases/tag/v0.2.0) |
 | 3 · Arquitectura y UI | `0.3.0` | ⏳ Planificada |
 | 4 · Producción | `1.0.0` | ⏳ Planificada |
 
@@ -135,10 +161,10 @@ Al cerrar una fase se sube `version` en `pyproject.toml` dentro de su PR y se cr
 
 ## Flujo de trabajo
 
-Cada fase se desarrolla en una rama `release/X.Y.Z`, con una rama por funcionalidad que se integra en ella. `main` solo avanza cuando la demo de la fase la valida. **Todo cambio entra por PR**: no hay `push` directo a `main` ni a las ramas de release. Ramas, PR, cierre de issues, promoción de releases y limitaciones: [CONTRIBUTING.md](CONTRIBUTING.md).
+Cada fase se desarrolla en una rama `release/X.Y.Z`, con una rama por funcionalidad que se integra en ella. `main` solo avanza cuando la demo de la fase la valida. **Todo cambio entra por PR**: no hay `push` directo a `main` ni a las ramas de release. Ramas, PR, cierre de issues, promoción de releases y limitaciones: [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md).
 
 ## Metodología
 
-- **TDD**: primero el test en rojo, luego el código mínimo y después el refactor.
+- **TDD**: primero el test en rojo, luego el código mínimo y después el refactor ([guía de pruebas](docs/TESTING.md)).
 - **Commits** en formato [Conventional Commits](https://www.conventionalcommits.org/es/v1.0.0/), con referencia al issue.
 - **Seguimiento** en el tablero GitHub Projects «TTX-247 Taxímetro» (una vista por fase) y en los issues del repositorio.
