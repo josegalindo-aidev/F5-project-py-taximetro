@@ -182,3 +182,30 @@ def test_un_historial_que_no_es_json_dice_en_que_linea_y_columna_falla(path, con
     message = str(info.value)
     assert f"no es un JSON válido ({where})" in message
     assert "Expecting" not in message  # sin el texto técnico del intérprete
+
+
+def test_un_historial_que_no_esta_en_utf8_lo_dice_sin_texto_tecnico(path):
+    path.write_bytes(bytes([0xFF, 0xFE, 0x5B, 0x5D]))  # bytes que no son UTF-8 válido
+
+    with pytest.raises(TripHistoryError) as info:
+        JsonTripRepository(path).list_finished(DAY)
+
+    message = str(info.value)
+    assert "no está guardado en UTF-8" in message
+    assert "codec" not in message
+
+
+@pytest.mark.parametrize(
+    "damaged",
+    [without("total"), record(total="abc"), record(started_at="ayer"), "no soy un objeto"],
+    ids=["falta-un-campo", "importe-no-numerico", "fecha-invalida", "no-es-un-objeto"],
+)
+def test_una_carrera_ilegible_se_identifica_por_su_posicion_en_el_historial(path, damaged):
+    path.write_text(json.dumps([record(id="a"), damaged, record(id="c")]), encoding="utf-8")
+
+    with pytest.raises(TripHistoryError) as info:
+        JsonTripRepository(path).list_finished(DAY)
+
+    message = str(info.value)
+    assert "la carrera n.º 2 tiene un dato que falta o no es válido" in message
+    assert "Error(" not in message  # sin el texto técnico de la excepción
