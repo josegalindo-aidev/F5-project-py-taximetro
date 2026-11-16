@@ -1,5 +1,6 @@
 # Proyecto: py-taximetro
 # fuente: tests/unit/core/test_trip_service.py
+from datetime import date
 from decimal import Decimal
 
 import pytest
@@ -183,3 +184,36 @@ def test_un_error_de_programacion_no_se_disfraza_de_fallo_de_guardado(tariff, cl
 
     with pytest.raises(InvalidTripRecord):
         service.finish()
+
+
+# US-05: consultar las carreras terminadas de un día
+ONE_DAY = 24 * 3600
+
+
+def run_one_trip(service, clock, wall_clock, seconds=1):
+    """Inicia y finaliza una carrera, avanzando los dos relojes."""
+    trip = service.start()
+    clock.advance(seconds)
+    wall_clock.advance(seconds)
+    service.finish()
+    return trip
+
+
+def test_las_carreras_terminadas_de_un_dia_se_listan_por_orden_de_fin(service, clock, wall_clock):
+    first = run_one_trip(service, clock, wall_clock, seconds=10)
+    second = run_one_trip(service, clock, wall_clock, seconds=5)
+    wall_clock.advance(ONE_DAY)
+    third = run_one_trip(service, clock, wall_clock, seconds=3)
+
+    assert [t.id for t in service.finished_on(date(2026, 11, 11))] == [first.id, second.id]
+    assert [t.id for t in service.finished_on(date(2026, 11, 12))] == [third.id]
+    assert service.finished_on(date(2026, 11, 10)) == []
+
+
+def test_sin_indicar_el_dia_se_usa_el_de_hoy_segun_el_reloj_de_pared(service, clock, wall_clock):
+    run_one_trip(service, clock, wall_clock)  # ayer
+    wall_clock.advance(ONE_DAY)
+    today_trip = run_one_trip(service, clock, wall_clock)
+
+    assert service.today() == date(2026, 11, 12)
+    assert [t.id for t in service.finished_on()] == [today_trip.id]
