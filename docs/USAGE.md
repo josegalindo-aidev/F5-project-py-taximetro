@@ -90,6 +90,7 @@ Ejemplo de sesión. Las líneas que empiezan por `>` son lo que escribes tú; lo
 ```
 Taxímetro digital TTX-247
 Historial: /ruta/a/data/trips.json
+Logs: /ruta/a/logs
 Comandos disponibles:
   iniciar    Inicia una carrera (el taxi empieza parado)
   parar      El taxi está parado
@@ -196,12 +197,12 @@ El programa **no arranca**: no usa ninguna tarifa por defecto, porque cobrar con
 
 ## 8. Dónde se guardan los datos
 
-Cada vez que finalizas una carrera, se añade a un fichero `trips.json` dentro de la **carpeta de datos**. Al arrancar, el programa muestra la ruta completa en la línea `Historial: …`.
+Cada vez que finalizas una carrera, se añade a un fichero `trips.json` dentro de la **carpeta de datos**. Al arrancar, el programa muestra las rutas completas en las líneas `Historial: …` y `Logs: …`.
 
 | Qué | Dónde | Cómo cambiarlo |
 |---|---|---|
 | Historial de carreras | `trips.json` dentro de la carpeta de datos. Por defecto, `data/` en la raíz del proyecto | Variable de entorno `TAXIMETRO_DATA_DIR`, que indica **una carpeta**, no un fichero |
-| Logs de ejecución | Carpeta propia, separada de los datos | `TAXIMETRO_LOG_DIR`. **Reservada**: se usará cuando se añadan los logs (US-06) y todavía no tiene efecto |
+| Logs de operación | Un fichero por día, `taximetro-AAAA-MM-DD.jsonl`, dentro de la **carpeta de logs**, separada de los datos. Por defecto, `logs/` en la raíz del proyecto | Variable de entorno `TAXIMETRO_LOG_DIR`, que indica **una carpeta**, no un fichero |
 | Tarifas | `config/rates.toml` | `TAXIMETRO_RATES` (apartado 7) |
 
 La carpeta de datos y la de logs son independientes a propósito: en una instalación de producción se pueden montar en ubicaciones distintas (por ejemplo, volúmenes diferentes). Se configuran como **carpetas** y no como ficheros porque, para no perder el historial si algo falla a mitad de escritura, el programa escribe primero un fichero temporal junto a `trips.json` y después lo intercambia por el original. Eso exige poder crear ficheros en esa carpeta.
@@ -219,6 +220,36 @@ $env:TAXIMETRO_DATA_DIR = "C:\ruta\a\mis\datos"; python -m taximetro
 ```
 
 Si la carpeta no existe, el programa la crea al guardar la primera carrera. Una variable vacía se ignora y se usa la carpeta por defecto.
+
+### Los logs de operación
+
+El responsable puede auditar el uso del taxímetro con los logs. Cada evento es **una línea JSON** que se añade al fichero del día, sin borrar nunca lo anterior:
+
+```
+{"ts": "2026-11-16T10:05:00.123456+01:00", "evento": "carrera_iniciada", "carrera": "a1b2c3d4"}
+{"ts": "2026-11-16T10:05:30.456789+01:00", "evento": "estado_cambiado", "carrera": "a1b2c3d4", "estado": "moving"}
+{"ts": "2026-11-16T10:12:00.789012+01:00", "evento": "carrera_finalizada", "carrera": "a1b2c3d4", "total": "7.25"}
+```
+
+| Evento | Cuándo se registra | Datos |
+|---|---|---|
+| `carrera_iniciada` | Al escribir `iniciar` | `carrera` |
+| `estado_cambiado` | En cada `parar` o `mover` | `carrera` y `estado` (`stopped` o `moving`) |
+| `carrera_finalizada` | Al escribir `finalizar` | `carrera` y `total` en euros, con punto decimal |
+| `carrera_no_guardada` | Si tras finalizar no se pudo guardar en el historial | `carrera` y `motivo` |
+
+- `ts` es la fecha y hora local, con la zona horaria. El identificador `carrera` es el mismo en todos los eventos de una carrera, así que se pueden seguir de principio a fin.
+- Una carrera que se inicia y no se finaliza deja solo su `carrera_iniciada`: así se ve que empezó y no se cobró.
+- Cada día tiene su fichero (`taximetro-2026-11-16.jsonl`). Los ficheros no se borran ni se rotan solos: archivarlos es cosa del responsable.
+- Los acentos y la `ñ` se escriben tal cual, sin secuencias de escape.
+
+Al arrancar, el programa comprueba la carpeta de logs: la crea si no existe y prueba a escribir en ella. Como los logs sirven para auditar, si no se puede usar el programa **no arranca**: muestra un mensaje que empieza por `Error:` y termina con **código de salida 1**.
+
+| Mensaje | Causa | Qué hacer |
+|---|---|---|
+| `No se puede usar la carpeta de logs '<ruta>': …` | `TAXIMETRO_LOG_DIR` apunta a un fichero, a una ruta que no se puede crear o a una carpeta sin permiso de escritura | Indica una carpeta en la que puedas escribir |
+
+Si el log falla **después** de arrancar (por ejemplo, el disco se llena), el programa lo ignora y sigue: la carrera se cobra con normalidad y el taxista nunca ve un error por culpa del registro.
 
 ### Si el historial tiene problemas
 
@@ -239,17 +270,18 @@ Si el fallo ocurre **después** de arrancar, al finalizar una carrera, el total 
 | El histórico muestra un día cada vez | No hay resúmenes por semana o por mes: se consulta un día con `historico AAAA-MM-DD`. |
 | Una carrera sin finalizar no se guarda | Solo se guardan las carreras finalizadas; si sales con una en curso, no se recupera. |
 | Un solo programa por carpeta de datos | Si dos instancias escriben a la vez en la misma carpeta, pueden perderse carreras. |
+| Los logs no se rotan | Hay un fichero por día y se acumulan; archivarlos o borrarlos es cosa del responsable. |
+| Un fallo del log durante la jornada no se avisa | Si el log deja de escribirse a mitad de la jornada, el programa sigue cobrando y no lo comunica: faltarían eventos. |
 | Tarifas leídas al arrancar | Si editas el fichero con el programa abierto, el cambio no se aplica hasta volver a abrirlo. |
 | Estado indicado a mano | El taxi solo puede estar parado o en movimiento, y el estado lo indicas tú con `parar` y `mover`. El programa no mide la velocidad, así que no aplica por sí mismo la regla de «menos de 20 km/h». |
 | Una carrera a la vez | Solo hay una carrera activa en cada momento. |
 
 ## 10. Qué llegará en las siguientes fases
 
-Las tarifas configurables, el historial en disco y la consulta del histórico del día, previstos para la Fase 2, ya están disponibles (apartados 2, 7 y 8).
+Las tarifas configurables, el historial en disco, la consulta del histórico del día y el registro de operaciones, previstos para la Fase 2, ya están disponibles (apartados 2, 7 y 8).
 
 | Fase | Novedades para el usuario |
 |---|---|
-| 2 | Registro de operaciones (logs) |
 | 3 | Acceso con contraseña e interfaz gráfica con botones grandes para tablet |
 | 4 | API REST, panel web para el responsable de flota y despliegue con un único comando |
 
