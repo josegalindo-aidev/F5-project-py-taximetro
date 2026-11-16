@@ -209,3 +209,18 @@ def test_una_carrera_ilegible_se_identifica_por_su_posicion_en_el_historial(path
     message = str(info.value)
     assert "la carrera n.º 2 tiene un dato que falta o no es válido" in message
     assert "Error(" not in message  # sin el texto técnico de la excepción
+
+
+@pytest.mark.parametrize("subcarpetas", [[], ["2026", "enero"]], ids=["directa", "anidada"])
+def test_el_mensaje_de_una_carpeta_de_datos_que_es_un_fichero_nombra_el_fichero_que_estorba(
+    tmp_path, subcarpetas
+):
+    no_es_carpeta = tmp_path / "no-soy-carpeta"
+    no_es_carpeta.write_text("esto es un fichero", encoding="utf-8")
+    repository = JsonTripRepository(no_es_carpeta.joinpath(*subcarpetas, "historial.json"))
+
+    with pytest.raises(TripHistoryError) as info:
+        repository.list_finished(DAY)
+
+    expected = f"La carpeta de datos '{no_es_carpeta}' no es una carpeta: es un fichero."
+    assert str(info.value) == expected
