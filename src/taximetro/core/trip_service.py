@@ -43,9 +43,10 @@ class TripService:
         if self._active is not None:
             raise TripAlreadyStarted
         trip = Trip(self._tariff, trip_id=uuid4().hex[:8])
-        trip.start(at=self._clock(), when=self._wall_clock())
+        now = self._wall_clock()
+        trip.start(at=self._clock(), when=now)
         self._active = trip
-        self._event_log.record(self._wall_clock(), "carrera_iniciada", carrera=trip.id)
+        self._event_log.record(now, "carrera_iniciada", carrera=trip.id)
         return trip
 
     def set_state(self, state: State) -> None:
@@ -60,8 +61,10 @@ class TripService:
 
     def finish(self) -> Decimal:
         trip = self._require_active()
-        total = trip.finish(at=self._clock(), when=self._wall_clock())
+        now = self._wall_clock()
+        total = trip.finish(at=self._clock(), when=now)
         self._active = None  # libre para la siguiente carrera, aunque falle el guardado
+        self._event_log.record(now, "carrera_finalizada", carrera=trip.id, total=str(total))
         try:
             self._repository.save(trip)
         except (OSError, TripHistoryError) as error:
