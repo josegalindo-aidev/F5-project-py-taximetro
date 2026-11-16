@@ -13,6 +13,9 @@ class FileEventLog:
     def __init__(self, directory: Path) -> None:
         self._directory = directory
 
+    def check(self) -> None:
+        raise NotImplementedError
+
     def record(self, at: datetime, event: str, **data: str) -> None:
         line = json.dumps({"ts": at.isoformat(), "evento": event, **data}, ensure_ascii=False)
         self._directory.mkdir(parents=True, exist_ok=True)
