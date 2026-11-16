@@ -281,3 +281,22 @@ def test_si_la_carpeta_de_logs_es_un_fichero_muestra_el_error_y_devuelve_1(
     assert "Traceback" not in captured.err
     assert out == []  # la CLI no llegó a arrancar
     assert no_es_carpeta.read_text(encoding="utf-8") == "esto es un fichero"  # no se toca
+
+
+def test_al_arrancar_el_programa_indica_donde_guarda_los_logs(tmp_path, monkeypatch):
+    logs = tmp_path / "mis-logs"
+    monkeypatch.setenv("TAXIMETRO_LOG_DIR", str(logs))
+    clock = FakeClock()
+    out: list[str] = []
+
+    main(
+        write_rates(tmp_path),
+        tmp_path / "datos",
+        clock=clock,
+        input_fn=ScriptedInput(clock, [(0, "salir")]),
+        output_fn=out.append,
+    )
+
+    help_at = next(i for i, line in enumerate(out) if line.startswith("Comandos disponibles:"))
+    assert f"Logs: {logs}" in out
+    assert out.index(f"Logs: {logs}") < help_at  # va con las notas, antes de la ayuda
