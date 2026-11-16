@@ -27,6 +27,7 @@ HELP = """Comandos disponibles:
   mover      El taxi está en movimiento
   estado     Muestra el estado y el importe actual
   finalizar  Termina la carrera y muestra el total
+  historico  Muestra las carreras de hoy, o de un día: historico AAAA-MM-DD
   ayuda      Muestra esta ayuda
   salir      Cierra el programa"""
 
