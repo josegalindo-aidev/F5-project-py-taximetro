@@ -124,7 +124,8 @@ class Cli:
             start, end = f"{trip.started_at:%H:%M}", f"{trip.finished_at:%H:%M}"
             self._print(f"  {number}. {start} - {end}  {format_euros(trip.total)}")
             total += trip.total
-        self._print(f"Total del día: {len(trips)} carreras, {format_euros(total)}")
+        word = "carrera" if len(trips) == 1 else "carreras"
+        self._print(f"Total del día: {len(trips)} {word}, {format_euros(total)}")
 
     def _goodbye(self) -> None:
         if self._service.active is not None:
