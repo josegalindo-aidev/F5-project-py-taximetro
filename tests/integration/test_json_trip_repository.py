@@ -160,3 +160,25 @@ def test_si_la_carpeta_de_datos_es_un_fichero_da_un_error_que_lo_nombra(
     assert "no es una carpeta" in str(info.value)
     assert "no-soy-carpeta" in str(info.value)
     assert no_es_carpeta.read_text(encoding="utf-8") == "esto es un fichero"  # no se toca
+
+
+NL = chr(10)  # salto de línea, sin escapar para que el texto del test sea legible
+
+# Mensajes legibles para quien no conoce Python: sin textos técnicos del intérprete
+@pytest.mark.parametrize(
+    ("content", "where"),
+    [
+        ("{esto no es json", "línea 1, columna 2"),
+        ("[" + NL + "  {" + NL + "  oops", "línea 3, columna 3"),
+    ],
+    ids=["una-linea", "varias-lineas"],
+)
+def test_un_historial_que_no_es_json_dice_en_que_linea_y_columna_falla(path, content, where):
+    path.write_text(content, encoding="utf-8")
+
+    with pytest.raises(TripHistoryError) as info:
+        JsonTripRepository(path).list_finished(DAY)
+
+    message = str(info.value)
+    assert f"no es un JSON válido ({where})" in message
+    assert "Expecting" not in message  # sin el texto técnico del intérprete
