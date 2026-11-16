@@ -6,7 +6,6 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 from datetime import date
-from decimal import Decimal
 from functools import partial
 
 from taximetro.core.day_report import DayReport
@@ -127,21 +126,19 @@ class Cli:
         except ValueError:
             self._print(f"Fecha no válida: '{day_text}'. Usa el formato AAAA-MM-DD.")
             return
-        trips = self._service.finished_on(day)
-        if not trips:
+        summary = self._report.for_day(day)
+        if summary.count == 0:
             if day:
                 self._print(f"El {day} no hubo carreras finalizadas.")
             else:
                 self._print("Hoy no hay carreras finalizadas.")
             return
         self._print(f"Carreras del {day}:" if day else "Carreras de hoy:")
-        total = Decimal(0)
-        for number, trip in enumerate(trips, start=1):
+        for number, trip in enumerate(summary.trips, start=1):
             start, end = f"{trip.started_at:%H:%M}", f"{trip.finished_at:%H:%M}"
             self._print(f"  {number}. {start} - {end}  {format_euros(trip.total)}")
-            total += trip.total
-        word = "carrera" if len(trips) == 1 else "carreras"
-        self._print(f"Total del día: {len(trips)} {word}, {format_euros(total)}")
+        word = "carrera" if summary.count == 1 else "carreras"
+        self._print(f"Total del día: {summary.count} {word}, {format_euros(summary.total)}")
 
     def _goodbye(self) -> None:
         if self._service.active is not None:
