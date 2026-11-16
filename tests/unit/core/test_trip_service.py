@@ -222,3 +222,12 @@ def test_sin_indicar_el_dia_se_usa_el_de_hoy_segun_el_reloj_de_pared(service, cl
 
     assert service.today() == date(2026, 11, 12)
     assert [t.id for t in service.finished_on()] == [today_trip.id]
+
+
+# US-06: registro de eventos de operación
+def test_al_iniciar_la_carrera_se_registra_el_evento_con_su_hora_e_identificador(
+    service, event_log, wall_clock
+):
+    trip = service.start()
+
+    assert event_log.events == [(wall_clock.now, "carrera_iniciada", {"carrera": trip.id})]
