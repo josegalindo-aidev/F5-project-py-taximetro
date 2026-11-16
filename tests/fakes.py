@@ -3,8 +3,10 @@
 """Dobles de test compartidos."""
 
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 
 from taximetro.core.errors import TripHistoryError
+from taximetro.core.trip import Trip
 
 
 class FakeWallClock:
@@ -83,3 +85,15 @@ class ScriptedInput:
         seconds, command = self.steps.pop(0)
         self.clock.advance(seconds)
         return command
+
+
+def saved_trip(repository, trip_id, start, end, total) -> None:
+    """Guarda en el repositorio una carrera ya terminada en noviembre de 2026.
+
+    `start` y `end` son tuplas (día, hora, minuto). El reloj de pared de las pruebas marca el
+    11/11/2026 a las 10:00.
+    """
+    started = datetime(2026, 11, *start, tzinfo=UTC)
+    finished = datetime(2026, 11, *end, tzinfo=UTC)
+    trip = Trip.restore(trip_id, started, finished, Decimal("30"), Decimal("20"), Decimal(total))
+    repository.save(trip)
