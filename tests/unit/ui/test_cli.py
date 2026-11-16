@@ -169,3 +169,18 @@ def test_historico_con_una_sola_carrera_usa_el_singular(tariff, clock):
 
     assert "Total del día: 1 carrera, 7,25 €" in out
     assert "1 carreras" not in out
+
+
+def test_historico_con_un_dia_lista_las_carreras_de_ese_dia(tariff, clock):
+    repository = InMemoryTripRepository()
+    saved_trip(repository, "noche", (10, 23, 50), (10, 23, 59), "99.99")  # se guarda antes...
+    saved_trip(repository, "manana", (10, 8, 0), (10, 8, 20), "5.00")  # ...pero es anterior
+    saved_trip(repository, "hoy", (11, 9, 5), (11, 9, 12), "7.25")  # otro día
+
+    out = run_cli(tariff, clock, [(0, "historico 2026-11-10")], repository)
+
+    assert "Carreras del 2026-11-10:" in out
+    assert out.index("1. 08:00 - 08:20  5,00 €") < out.index("2. 23:50 - 23:59  99,99 €")
+    assert "Total del día: 2 carreras, 104,99 €" in out
+    assert "7,25" not in out
+    assert "Comando desconocido" not in out
