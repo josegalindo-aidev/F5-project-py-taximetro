@@ -15,7 +15,7 @@ from taximetro.core.errors import (
 from taximetro.core.trip import State
 from taximetro.core.trip_service import TripService
 from taximetro.infra.repos.memory import InMemoryTripRepository
-from tests.fakes import BrokenRepository, FakeClock, FakeWallClock
+from tests.fakes import BrokenRepository, FakeClock, FakeEventLog, FakeWallClock
 
 
 @pytest.fixture
@@ -34,8 +34,13 @@ def repository() -> InMemoryTripRepository:
 
 
 @pytest.fixture
-def service(tariff, clock, wall_clock, repository) -> TripService:
-    return TripService(tariff, clock, wall_clock, repository)
+def event_log() -> FakeEventLog:
+    return FakeEventLog()
+
+
+@pytest.fixture
+def service(tariff, clock, wall_clock, repository, event_log) -> TripService:
+    return TripService(tariff, clock, wall_clock, repository, event_log)
 
 
 def test_sin_carrera_al_arrancar(service):
@@ -132,7 +137,7 @@ def test_al_finalizar_guarda_la_carrera_en_el_repositorio(service, clock, wall_c
 def test_si_falla_el_guardado_la_carrera_se_cobra_y_el_error_lleva_el_total(
     tariff, clock, wall_clock
 ):
-    service = TripService(tariff, clock, wall_clock, BrokenRepository())
+    service = TripService(tariff, clock, wall_clock, BrokenRepository(), FakeEventLog())
     service.start()
     clock.advance(10)
 
@@ -155,7 +160,7 @@ class DamagedHistoryRepository:
 
 
 def test_si_el_historial_esta_danado_la_carrera_se_cobra_y_se_avisa(tariff, clock, wall_clock):
-    service = TripService(tariff, clock, wall_clock, DamagedHistoryRepository())
+    service = TripService(tariff, clock, wall_clock, DamagedHistoryRepository(), FakeEventLog())
     service.start()
     clock.advance(10)
 
@@ -179,7 +184,7 @@ class BuggyRepository:
 
 
 def test_un_error_de_programacion_no_se_disfraza_de_fallo_de_guardado(tariff, clock, wall_clock):
-    service = TripService(tariff, clock, wall_clock, BuggyRepository())
+    service = TripService(tariff, clock, wall_clock, BuggyRepository(), FakeEventLog())
     service.start()
 
     with pytest.raises(InvalidTripRecord):

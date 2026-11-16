@@ -7,7 +7,7 @@ import pytest
 from taximetro.core.trip_service import TripService
 from taximetro.infra.repos.memory import InMemoryTripRepository
 from taximetro.ui.cli.app import Cli
-from tests.fakes import FakeClock, FakeWallClock, ScriptedInput
+from tests.fakes import FakeClock, FakeEventLog, FakeWallClock, ScriptedInput
 
 
 @pytest.fixture
@@ -17,7 +17,7 @@ def clock() -> FakeClock:
 
 def session(tariff, clock, steps) -> str:
     out: list[str] = []
-    service = TripService(tariff, clock, FakeWallClock(), InMemoryTripRepository())
+    service = TripService(tariff, clock, FakeWallClock(), InMemoryTripRepository(), FakeEventLog())
     Cli(service, ScriptedInput(clock, steps), out.append).run()
     return "\n".join(out)
 

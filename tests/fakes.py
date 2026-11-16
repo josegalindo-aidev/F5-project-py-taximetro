@@ -53,6 +53,16 @@ class UnreadableHistoryRepository:
         raise TripHistoryError("El historial 'trips.json' está dañado: no se puede leer")
 
 
+class FakeEventLog:
+    """Registro de eventos en memoria: cumple el puerto `EventLog`."""
+
+    def __init__(self) -> None:
+        self.events: list[tuple[datetime, str, dict]] = []
+
+    def record(self, at: datetime, event: str, **data: str) -> None:
+        self.events.append((at, event, data))
+
+
 class ScriptedInput:
     """Consola simulada: cada paso (segundos, comando) avanza el reloj y devuelve el comando."""
 

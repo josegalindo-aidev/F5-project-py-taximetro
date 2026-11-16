@@ -14,7 +14,7 @@ from taximetro.core.errors import (
     TripNotSaved,
     TripNotStarted,
 )
-from taximetro.core.ports import Clock, TripRepository, WallClock
+from taximetro.core.ports import Clock, EventLog, TripRepository, WallClock
 from taximetro.core.tariff import Tariff
 from taximetro.core.trip import State, Trip
 
@@ -26,11 +26,13 @@ class TripService:
         clock: Clock,
         wall_clock: WallClock,
         repository: TripRepository,
+        event_log: EventLog,
     ) -> None:
         self._tariff = tariff
         self._clock = clock
         self._wall_clock = wall_clock
         self._repository = repository
+        self._event_log = event_log
         self._active: Trip | None = None
 
     @property
