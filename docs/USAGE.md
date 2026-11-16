@@ -247,7 +247,8 @@ Al arrancar, el programa comprueba la carpeta de logs: la crea si no existe y pr
 
 | Mensaje | Causa | Qué hacer |
 |---|---|---|
-| `No se puede usar la carpeta de logs '<ruta>': …` | `TAXIMETRO_LOG_DIR` apunta a un fichero, a una ruta que no se puede crear o a una carpeta sin permiso de escritura | Indica una carpeta en la que puedas escribir |
+| `La carpeta de logs '<ruta>' no es una carpeta: es un fichero.` | `TAXIMETRO_LOG_DIR` apunta a un fichero, o una carpeta por encima de la ruta lo es | Indica una carpeta, existente o que todavía no exista |
+| `No se puede usar la carpeta de logs '<ruta>': <motivo>` | La carpeta no se puede crear o no hay permiso para escribir en ella; el motivo lo da el sistema operativo | Indica una carpeta en la que puedas escribir |
 
 Si el log falla **después** de arrancar (por ejemplo, el disco se llena), el programa lo ignora y sigue: la carrera se cobra con normalidad y el taxista nunca ve un error por culpa del registro.
 
@@ -257,7 +258,10 @@ Al arrancar, el programa lee el historial una vez. Si no puede, **no arranca** y
 
 | Mensaje | Causa | Qué hacer |
 |---|---|---|
-| `El historial '<ruta>' está dañado: …` | El fichero no es JSON válido, no es una lista de carreras o alguna carrera no se puede interpretar | Guarda una copia, corrige el fichero o quítalo para empezar un historial nuevo |
+| `El historial '<ruta>' está dañado: no es un JSON válido (línea 3, columna 1)` | El fichero no es JSON válido; la línea y la columna dicen dónde falla | Abre el fichero en esa posición y corrígelo, o guarda una copia y quítalo para empezar un historial nuevo |
+| `El historial '<ruta>' está dañado: la carrera n.º 2 tiene un dato que falta o no es válido` | Una carrera, la segunda en este ejemplo, no tiene todos sus datos, tiene un importe que no es un número o una fecha mal escrita | Corrige o quita esa carrera |
+| `El historial '<ruta>' está dañado: no está guardado en UTF-8` | El fichero se guardó con otra codificación | Guárdalo como UTF-8 |
+| `El historial '<ruta>' está dañado: se esperaba una lista de carreras` | Es un JSON válido, pero no una lista de carreras | Corrige el fichero o quítalo para empezar un historial nuevo |
 | `No se pudo leer el historial '<ruta>': …` | El fichero existe pero no se puede leer: falta el permiso o la ruta es una carpeta | Revisa los permisos y que `trips.json` sea un fichero |
 | `La carpeta de datos '<ruta>' no es una carpeta: es un fichero.` | `TAXIMETRO_DATA_DIR` apunta a un fichero, o una carpeta por encima de la ruta lo es | Indica una carpeta, existente o que todavía no exista |
 

@@ -176,6 +176,7 @@ Lecciones aprendidas con esta técnica:
 | `=` en vez de `+=` en un acumulador | Los tests tenían un único tramo por estado | Varios tramos del mismo estado |
 | Un test de «no repite la ruta» pasaba cuando debía fallar | Windows muestra las barras duplicadas en el error del sistema | Contar el nombre de la carpeta, no la ruta completa |
 | Un mensaje de error del historial cumplía el test por casualidad | El nombre del fichero buscado coincidía con parte de la ruta temporal del test | Dar al fichero de prueba un nombre que la ruta no pueda contener (`historial.json`) |
+| Un mensaje que nombraba la ruta equivocada pasaba los tests | El test solo buscaba un fragmento (el nombre del fichero), que también forma parte de la ruta completa | Comparar el **texto completo** del mensaje |
 
 Cuidado al automatizarlo con scripts: los ficheros del proyecto pueden tener saltos de línea de Windows, y un patrón de varias líneas escrito con `\n` no coincidiría. Se mutan líneas sueltas y se leen y escriben los **bytes**, sin transformarlos.
 
@@ -186,7 +187,7 @@ Un script de mutación fiable cumple estas reglas:
 3. **El resultado se cuenta, no se estima**: el propio script imprime «N de M detectados» y los supervivientes.
 4. **Se ejecuta con `-x`** (parar en el primer fallo): basta un test en rojo para dar el mutante por detectado.
 
-Al cerrar TK-04 se probaron 26 mutantes sobre el repositorio JSON, el arranque, `TripService`, la CLI y la validación común, y los 26 fueron detectados. Es una comprobación de las decisiones que más importan, no una cobertura exhaustiva. Después, con el histórico del día y los logs de operación, se repitió con 41 mutantes más: 39 se detectaron a la primera, y los dos supervivientes llevaron a eliminar código muerto y a cubrir un hueco de pruebas (la escritura dentro de la carpeta de logs).
+Al cerrar TK-04 se probaron 26 mutantes sobre el repositorio JSON, el arranque, `TripService`, la CLI y la validación común, y los 26 fueron detectados. Es una comprobación de las decisiones que más importan, no una cobertura exhaustiva. Después, con el histórico del día y los logs de operación, se repitió con 41 mutantes más: 39 se detectaron a la primera, y los dos supervivientes llevaron a eliminar código muerto y a cubrir un hueco de pruebas (la escritura dentro de la carpeta de logs). Con los mensajes de error claros se repitió con 14 mutantes más: 13 se detectaron y el superviviente enseñó la lección de la tabla anterior sobre comparar el texto exacto.
 
 ## 7. Convenciones de los tests
 
