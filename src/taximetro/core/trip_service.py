@@ -68,6 +68,7 @@ class TripService:
         try:
             self._repository.save(trip)
         except (OSError, TripHistoryError) as error:
+            self._event_log.record(now, "carrera_no_guardada", carrera=trip.id, motivo=str(error))
             raise TripNotSaved(total, str(error)) from error
         return total
 
