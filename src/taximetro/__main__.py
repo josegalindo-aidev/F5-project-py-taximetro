@@ -36,7 +36,7 @@ def default_data_dir(environ: Mapping[str, str]) -> Path:
 
 
 def default_log_dir(environ: Mapping[str, str]) -> Path:
-    raise NotImplementedError
+    return _path_from_environment(environ, "TAXIMETRO_LOG_DIR", PROJECT_ROOT / "logs")
 
 
 def local_now() -> datetime:
