@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 from decimal import Decimal
 from uuid import uuid4
 
@@ -59,6 +60,12 @@ class TripService:
         except (OSError, TripHistoryError) as error:
             raise TripNotSaved(total, str(error)) from error
         return total
+
+    def today(self) -> date:
+        raise NotImplementedError
+
+    def finished_on(self, day: date | None = None) -> list[Trip]:
+        raise NotImplementedError
 
     def _require_active(self) -> Trip:
         if self._active is None:
