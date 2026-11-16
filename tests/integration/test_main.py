@@ -253,3 +253,31 @@ def test_los_logs_y_los_datos_son_carpetas_independientes():
 
     assert default_log_dir(environ) == Path("/montaje/logs")
     assert default_data_dir(environ) == Path("/montaje/datos")
+
+
+# US-06: si la carpeta de logs no se puede usar, el programa no arranca
+def test_si_la_carpeta_de_logs_es_un_fichero_muestra_el_error_y_devuelve_1(
+    tmp_path, capsys, monkeypatch
+):
+    no_es_carpeta = tmp_path / "no-soy-carpeta"
+    no_es_carpeta.write_text("esto es un fichero", encoding="utf-8")
+    monkeypatch.setenv("TAXIMETRO_LOG_DIR", str(no_es_carpeta))
+    clock = FakeClock()
+    out: list[str] = []
+
+    code = main(
+        write_rates(tmp_path),
+        tmp_path / "datos",
+        clock=clock,
+        input_fn=ScriptedInput(clock, [(0, "iniciar")]),
+        output_fn=out.append,
+    )
+
+    captured = capsys.readouterr()
+    assert code == 1
+    assert captured.err.startswith("Error: ")
+    assert "carpeta de logs" in captured.err
+    assert "no-soy-carpeta" in captured.err
+    assert "Traceback" not in captured.err
+    assert out == []  # la CLI no llegó a arrancar
+    assert no_es_carpeta.read_text(encoding="utf-8") == "esto es un fichero"  # no se toca
