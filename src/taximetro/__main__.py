@@ -9,6 +9,7 @@ from collections.abc import Callable, Mapping
 from datetime import datetime
 from pathlib import Path
 
+from taximetro.core.day_report import DayReport
 from taximetro.core.errors import EventLogError, TariffFileError, TripHistoryError
 from taximetro.core.ports import Clock, EventLog, TripRepository, WallClock
 from taximetro.core.trip_service import TripService
@@ -76,7 +77,9 @@ def main(
     except (TariffFileError, TripHistoryError, EventLogError) as error:
         print(f"Error: {error}", file=sys.stderr)
         return 1
-    Cli(service, input_fn, output_fn, [f"Historial: {trips_file}", f"Logs: {log_dir}"]).run()
+    report = DayReport(repository, local_now)
+    notes = [f"Historial: {trips_file}", f"Logs: {log_dir}"]
+    Cli(service, report, input_fn, output_fn, notes).run()
     return 0
 
 
