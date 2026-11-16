@@ -43,8 +43,15 @@ def test_format_euros(amount, text):
 # TK-02: instrucciones de uso al arrancar
 def test_muestra_instrucciones_al_arrancar(tariff, clock):
     out = run_cli(tariff, clock, [])
-    for command in ("iniciar", "parar", "mover", "estado", "finalizar", "ayuda", "salir"):
+    commands = ("iniciar", "parar", "mover", "estado", "finalizar", "historico", "ayuda", "salir")
+    for command in commands:
         assert command in out
+
+
+def test_la_ayuda_explica_que_historico_admite_un_dia(tariff, clock):
+    out = run_cli(tariff, clock, [(0, "ayuda")])
+
+    assert "historico AAAA-MM-DD" in out
 
 
 def test_ayuda_repite_las_instrucciones(tariff, clock):
