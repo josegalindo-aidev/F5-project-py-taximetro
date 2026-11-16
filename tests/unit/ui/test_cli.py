@@ -159,3 +159,13 @@ def test_historico_sin_carreras_lo_dice_y_no_muestra_un_resumen(tariff, clock):
     assert "Hoy no hay carreras finalizadas." in out
     assert "Total del día" not in out
     assert "Carreras de hoy:" not in out
+
+
+def test_historico_con_una_sola_carrera_usa_el_singular(tariff, clock):
+    repository = InMemoryTripRepository()
+    saved_trip(repository, "unica", (11, 9, 5), (11, 9, 12), "7.25")
+
+    out = run_cli(tariff, clock, [(0, "historico")], repository)
+
+    assert "Total del día: 1 carrera, 7,25 €" in out
+    assert "1 carreras" not in out
