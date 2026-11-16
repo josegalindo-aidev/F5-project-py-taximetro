@@ -8,7 +8,13 @@ from pathlib import Path
 
 import pytest
 
-from taximetro.__main__ import build_service, default_data_dir, default_rates_path, main
+from taximetro.__main__ import (
+    build_service,
+    default_data_dir,
+    default_log_dir,
+    default_rates_path,
+    main,
+)
 from taximetro.core.tariff import Tariff
 from taximetro.infra.repos.memory import InMemoryTripRepository
 from taximetro.infra.tariff_loader import load_tariff
@@ -224,3 +230,26 @@ def test_si_la_carpeta_de_datos_es_un_fichero_muestra_el_error_y_devuelve_1(tmp_
     assert "no es una carpeta" in captured.err
     assert "Traceback" not in captured.err
     assert out == []  # la CLI no llegó a arrancar
+
+
+# US-06: carpeta de los logs de operación, independiente de la de datos
+def test_la_carpeta_de_logs_sale_de_la_variable_de_entorno():
+    environ = {"TAXIMETRO_LOG_DIR": "/otra/ruta/logs"}
+
+    assert default_log_dir(environ) == Path("/otra/ruta/logs")
+
+
+def test_sin_variable_de_entorno_los_logs_van_a_la_carpeta_logs_del_proyecto():
+    assert default_log_dir({}) == PROJECT_ROOT / "logs"
+
+
+@pytest.mark.parametrize("value", ["", "   "], ids=["vacia", "solo-espacios"])
+def test_una_variable_vacia_de_la_carpeta_de_logs_se_trata_como_no_definida(value):
+    assert default_log_dir({"TAXIMETRO_LOG_DIR": value}) == PROJECT_ROOT / "logs"
+
+
+def test_los_logs_y_los_datos_son_carpetas_independientes():
+    environ = {"TAXIMETRO_LOG_DIR": "/montaje/logs", "TAXIMETRO_DATA_DIR": "/montaje/datos"}
+
+    assert default_log_dir(environ) == Path("/montaje/logs")
+    assert default_data_dir(environ) == Path("/montaje/datos")
