@@ -13,6 +13,7 @@ from taximetro.ui.cli.format import format_euros
 from tests.fakes import (
     BrokenRepository,
     FakeClock,
+    FakeEventLog,
     FakeWallClock,
     ScriptedInput,
     UnreadableHistoryRepository,
@@ -28,7 +29,7 @@ def run_cli(tariff, clock, steps, repository=None, notes=()) -> str:
     """Ejecuta la CLI con una consola simulada y devuelve todo lo impreso."""
     out: list[str] = []
     repository = repository if repository is not None else InMemoryTripRepository()
-    service = TripService(tariff, clock, FakeWallClock(), repository)
+    service = TripService(tariff, clock, FakeWallClock(), repository, FakeEventLog())
     Cli(service, ScriptedInput(clock, steps), out.append, notes).run()
     return "\n".join(out)
 

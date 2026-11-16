@@ -10,8 +10,9 @@ from datetime import datetime
 from pathlib import Path
 
 from taximetro.core.errors import TariffFileError, TripHistoryError
-from taximetro.core.ports import Clock, TripRepository, WallClock
+from taximetro.core.ports import Clock, EventLog, TripRepository, WallClock
 from taximetro.core.trip_service import TripService
+from taximetro.infra.event_log import FileEventLog
 from taximetro.infra.repos.json_file import JsonTripRepository
 from taximetro.infra.tariff_loader import load_tariff
 from taximetro.ui.cli.app import Cli
@@ -47,10 +48,11 @@ def local_now() -> datetime:
 def build_service(
     rates_path: Path,
     repository: TripRepository,
+    event_log: EventLog,
     clock: Clock = time.monotonic,
     wall_clock: WallClock = local_now,
 ) -> TripService:
-    return TripService(load_tariff(rates_path), clock, wall_clock, repository)
+    return TripService(load_tariff(rates_path), clock, wall_clock, repository, event_log)
 
 
 def main(
@@ -64,8 +66,9 @@ def main(
     path = rates_path or default_rates_path(os.environ)
     trips_file = (data_dir or default_data_dir(os.environ)) / TRIPS_FILENAME
     repository = JsonTripRepository(trips_file)
+    event_log = FileEventLog(default_log_dir(os.environ))
     try:
-        service = build_service(path, repository, clock)
+        service = build_service(path, repository, event_log, clock)
         # Lee el historial una vez: si está dañado, se avisa ahora y no al cobrar una carrera.
         repository.list_finished(local_now().date())
     except (TariffFileError, TripHistoryError) as error:
