@@ -47,8 +47,41 @@ Escribe un comando y pulsa Intro. No distingue mayúsculas de minúsculas ni esp
 | `mover` | Cambia al estado en movimiento | `Estado: en movimiento.` |
 | `estado` | Muestra el estado y el importe acumulado, sin cerrar la carrera | `Estado: en movimiento - Importe actual: 0,70 €` |
 | `finalizar` | Termina la carrera y muestra el total | `Carrera finalizada. Total: 0,70 €` |
+| `historico` | Muestra las carreras finalizadas de hoy; con una fecha, las de ese día (`historico AAAA-MM-DD`) | `Total del día: 2 carreras, 19,55 €` |
 | `ayuda` | Repite la lista de comandos | La lista de comandos |
 | `salir` | Cierra el programa | `Hasta pronto.` |
+
+### El histórico del día
+
+`historico` lista las carreras **finalizadas** de hoy, de la más antigua a la más reciente, con su hora de inicio y de fin y su importe, y suma el total del día:
+
+```
+> historico
+Carreras de hoy:
+  1. 09:05 - 09:12  7,25 €
+  2. 11:40 - 11:52  12,30 €
+Total del día: 2 carreras, 19,55 €
+```
+
+Con una fecha en formato `AAAA-MM-DD` muestra otro día:
+
+```
+> historico 2026-11-10
+Carreras del 2026-11-10:
+  1. 08:00 - 08:20  5,00 €
+Total del día: 1 carrera, 5,00 €
+```
+
+Una carrera cuenta en el día en que **termina** (una que empieza a las 23:50 y acaba a las 00:20 figura en el día siguiente). Una carrera sin finalizar no aparece. El histórico persiste entre sesiones porque sale del historial en disco (apartado 8).
+
+| Mensaje | Causa | Qué hacer |
+|---|---|---|
+| `Hoy no hay carreras finalizadas.` | Todavía no has finalizado ninguna carrera hoy | Nada: es informativo |
+| `El 2026-11-10 no hubo carreras finalizadas.` | Ese día no hay carreras en el historial | Comprueba la fecha |
+| `Fecha no válida: 'ayer'. Usa el formato AAAA-MM-DD.` | La fecha no existe o no está en ese formato (por ejemplo, `11/11/2026` o `2026-13-45`) | Escríbela con año, mes y día separados por guiones |
+| `El historial '<ruta>' está dañado: …` | El fichero del historial no se puede interpretar (apartado 8) | Revisa el fichero; el mensaje explica cómo |
+
+Si el historial no se puede leer, el mensaje es el mismo que al arrancar (apartado 8) y el programa **sigue funcionando**: puedes seguir cobrando carreras.
 
 ## 3. Una carrera paso a paso
 
@@ -63,6 +96,7 @@ Comandos disponibles:
   mover      El taxi está en movimiento
   estado     Muestra el estado y el importe actual
   finalizar  Termina la carrera y muestra el total
+  historico  Muestra las carreras de hoy, o de un día: historico AAAA-MM-DD
   ayuda      Muestra esta ayuda
   salir      Cierra el programa
 > iniciar
@@ -202,7 +236,7 @@ Si el fallo ocurre **después** de arrancar, al finalizar una carrera, el total 
 
 | Limitación | Detalle |
 |---|---|
-| Historial sin consulta | Las carreras finalizadas se guardan, pero todavía no hay un comando para consultarlas (histórico del día, US-05). |
+| El histórico muestra un día cada vez | No hay resúmenes por semana o por mes: se consulta un día con `historico AAAA-MM-DD`. |
 | Una carrera sin finalizar no se guarda | Solo se guardan las carreras finalizadas; si sales con una en curso, no se recupera. |
 | Un solo programa por carpeta de datos | Si dos instancias escriben a la vez en la misma carpeta, pueden perderse carreras. |
 | Tarifas leídas al arrancar | Si editas el fichero con el programa abierto, el cambio no se aplica hasta volver a abrirlo. |
@@ -211,11 +245,11 @@ Si el fallo ocurre **después** de arrancar, al finalizar una carrera, el total 
 
 ## 10. Qué llegará en las siguientes fases
 
-Las tarifas configurables y el historial en disco, previstos para la Fase 2, ya están disponibles (apartados 7 y 8).
+Las tarifas configurables, el historial en disco y la consulta del histórico del día, previstos para la Fase 2, ya están disponibles (apartados 2, 7 y 8).
 
 | Fase | Novedades para el usuario |
 |---|---|
-| 2 | Consulta del histórico del día y registro de operaciones (logs) |
+| 2 | Registro de operaciones (logs) |
 | 3 | Acceso con contraseña e interfaz gráfica con botones grandes para tablet |
 | 4 | API REST, panel web para el responsable de flota y despliegue con un único comando |
 

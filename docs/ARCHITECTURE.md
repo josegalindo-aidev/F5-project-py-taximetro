@@ -8,7 +8,7 @@ fuente: docs/ARCHITECTURE.md
 | | |
 |---|---|
 | **Proyecto** | py-taximetro (prototipo de TaxiTech Solutions S.L.) |
-| **Alcance que refleja** | Fase 1 (MVP CLI): US-01 a US-04 y TK-02, más de la Fase 2: US-07 (tarifas en fichero de configuración) y TK-04 (historial de carreras en disco) |
+| **Alcance que refleja** | Fase 1 (MVP CLI): US-01 a US-04 y TK-02, más de la Fase 2: US-07 (tarifas en fichero de configuración), TK-04 (historial de carreras en disco) y US-05 (histórico del día) |
 | **Fuente de verdad** | El código en `src/taximetro/`. Si algo de este documento y el código difieren, manda el código. |
 
 > **Convención de estado.** Cada elemento lleva una marca: ✅ implementado y probado, 🟡 existe pero aún no se usa, ⏳ planificado (no existe todavía).
@@ -25,7 +25,8 @@ El taxímetro funciona por línea de comandos (Fase 1, más US-07 y TK-04 de la 
 - muestra el importe acumulado y el total final en euros,
 - permite encadenar carreras sin cerrar el programa,
 - lee sus tarifas de un fichero de configuración, de modo que cambiar el cobro no exige tocar el código (US-07),
-- guarda cada carrera finalizada en un historial en disco que se conserva al cerrar el programa, sin que un fallo del historial esconda nunca el importe (TK-04).
+- guarda cada carrera finalizada en un historial en disco que se conserva al cerrar el programa, sin que un fallo del historial esconda nunca el importe (TK-04),
+- permite consultar las carreras de hoy o de otro día, con su hora, su importe y el total (US-05).
 
 Este documento describe **cómo está construido** (módulos), **qué hace** (arquitectura funcional) y **por qué** se diseñó así (decisiones). Las fases 2 a 4 se recogen como evolución prevista en la sección 9.
 
@@ -134,6 +135,8 @@ Los bloques marcados como `planificado` (GUI, API y el repositorio SQL) aún no 
 | `set_state(state)` | Cambia el estado de la carrera activa. |
 | `current_amount()` | Importe actual de la carrera activa. |
 | `finish()` | Finaliza, guarda la carrera en el historial, devuelve el total y deja el servicio libre. Si el guardado falla, lanza `TripNotSaved` con el total. |
+| `today()` | El día actual según el reloj de pared. |
+| `finished_on(day=None)` | Las carreras terminadas ese día, de la más antigua a la más reciente; sin día, las de hoy. Delega en `TripRepository.list_finished`. |
 | `active` | La carrera activa, o `None`. |
 
 ### 3.2 Interfaz de línea de comandos — `src/taximetro/ui/cli/`
@@ -152,10 +155,11 @@ Los bloques marcados como `planificado` (GUI, API y el repositorio SQL) aún no 
 | `mover` | Pasa al estado en movimiento. |
 | `estado` | Muestra el estado y el importe actual. |
 | `finalizar` | Termina la carrera y muestra el total. |
+| `historico [AAAA-MM-DD]` | Lista las carreras finalizadas de hoy o del día indicado, con su hora, su importe y el total. |
 | `ayuda` | Repite las instrucciones. |
 | `salir` | Cierra el programa (avisa si hay una carrera sin cobrar). |
 
-La entrada no distingue mayúsculas ni espacios sobrantes, e ignora las líneas vacías.
+La entrada no distingue mayúsculas ni espacios sobrantes, e ignora las líneas vacías. `historico` es el único comando con argumento: `Cli._dispatch` separa la línea en nombre y argumento solo para él, y los demás siguen buscándose por línea completa (`iniciar hola` es un comando desconocido). Una fecha que no es `AAAA-MM-DD` muestra `Fecha no válida…` y el programa sigue.
 
 ### 3.3 Infraestructura — `src/taximetro/infra/`
 
@@ -237,7 +241,6 @@ Los datos y los logs son **dos carpetas independientes** para poder montarlas en
 |---|---|
 | `ui/gui/`, `ui/api/` | Paquetes vacíos que reservan el sitio de las fases 3 y 4. |
 | `TAXIMETRO_LOG_DIR` | Carpeta de logs decidida pero sin código: llega con US-06. |
-| `TripRepository.list_finished` | Implementado y probado en los dos repositorios, pero ningún comando de la CLI lo usa todavía: entra con US-05 (histórico del día). |
 
 ---
 
@@ -285,6 +288,7 @@ Un tramo termina en cada cambio de estado o al finalizar. Ejemplo (10 s parado, 
 | **TK-02** (#12) | Instrucciones de uso al arrancar | `HELP` y `Cli.run` | `test_muestra_instrucciones_al_arrancar` |
 | **US-07** (#8) | Tarifas en fichero de configuración | `load_tariff`, `default_rates_path`, `build_service`, `main` | `test_el_servicio_cobra_con_las_tarifas_del_fichero` y `test_con_un_fichero_valido_lanza_la_cli_con_esas_tarifas_y_devuelve_0` |
 | **TK-04** (#14) | Historial guardado en disco | `JsonTripRepository`, `ensure_can_be_saved`, `TripService.finish`, `Trip.restore`, `default_data_dir`, `main` | `test_las_carreras_terminadas_se_conservan_al_reiniciar_el_programa` y el resto de `test_fase2_historial.py` |
+| **US-05** (#6) | Ver el histórico del día (o de otro día) | `Cli._history`, `Cli._dispatch`, `TripService.finished_on` y `today`, `TripRepository.list_finished` | `test_us05_el_historico_del_dia_conserva_las_carreras_al_reiniciar` y el resto de `test_us05_historico.py` |
 | — | Consulta del importe en curso (`estado`) | `Cli._status`, `TripService.current_amount`, `Trip.amount_at` | `test_estado_con_carrera_muestra_estado_e_importe` |
 
 ### 4.3 Ciclo de vida de una carrera
@@ -408,15 +412,15 @@ El proyecto se desarrolla con **TDD**: primero el test en rojo, luego el código
 
 | Nivel | Carpeta | Qué prueba | Pruebas |
 |---|---|---|---|
-| Unitarias del núcleo | `tests/unit/core/` | `Tariff`, `Trip` y `TripService` aislados | 42 |
-| Unitarias de la CLI | `tests/unit/ui/` | `Cli` y `format_euros` con consola simulada | 18 |
-| Aceptación | `tests/acceptance/` | US-01 a US-04 (4) y el historial en disco, TK-04 (3), de principio a fin | 7 |
-| Convenciones | `tests/test_conventions.py` | Cabecera de cada `.py` (crece con cada fichero nuevo) | 53 |
+| Unitarias del núcleo | `tests/unit/core/` | `Tariff`, `Trip` y `TripService` aislados | 44 |
+| Unitarias de la CLI | `tests/unit/ui/` | `Cli` y `format_euros` con consola simulada | 30 |
+| Aceptación | `tests/acceptance/` | US-01 a US-04 (4), el historial en disco, TK-04 (3), y el histórico del día, US-05 (4), de principio a fin | 11 |
+| Convenciones | `tests/test_conventions.py` | Cabecera de cada `.py` (crece con cada fichero nuevo) | 57 |
 | Integración | `tests/integration/` | Cargador de tarifas (30), repositorio JSON (19) y arranque (18), con ficheros temporales | 67 |
 | Contrato | `tests/contract/` | La misma batería de 9 tests para el repositorio en memoria y el JSON | 18 |
-| | | **Total** | **205** |
+| | | **Total** | **227** |
 
-**Dobles de prueba** (`tests/fakes.py`): `FakeClock` (reloj que avanza a mano), `FakeWallClock` (reloj de pared controlable), `BrokenRepository` (guardado que siempre falla) y `ScriptedInput` (consola que devuelve comandos y avanza el reloj entre ellos). Los fixtures compartidos están en `tests/conftest.py`.
+**Dobles de prueba** (`tests/fakes.py`): `FakeClock` (reloj que avanza a mano), `FakeWallClock` (reloj de pared controlable), `BrokenRepository` (guardado que siempre falla), `UnreadableHistoryRepository` (consultar el historial siempre falla) y `ScriptedInput` (consola que devuelve comandos y avanza el reloj entre ellos). Los fixtures compartidos están en `tests/conftest.py`.
 
 **Cobertura:** 99 % al cerrar TK-04. Todos los módulos están al 100 % salvo `__main__.py`, cuya única línea sin cubrir es la llamada `raise SystemExit(main())` del bloque `if __name__ == "__main__"`.
 
@@ -476,7 +480,7 @@ python -m ruff check src tests
 
 | Fase | Módulos nuevos o cambios | Issues |
 |---|---|---|
-| **Fase 2** — Observabilidad y persistencia | `infra/repos/` (memoria y JSON) implementando `TripRepository`; logging estructurado; comando de histórico del día. **Ya hecho:** cargador de tarifas desde `config/rates.toml` (US-07) y repositorio JSON del historial con la carpeta de datos (TK-04). **Pendiente:** carpeta de logs `TAXIMETRO_LOG_DIR` (US-06) y la consulta del histórico (US-05) | US-05 (#6), US-06 (#7), US-07 (#8), TK-03 (#13), TK-04 (#14) |
+| **Fase 2** — Observabilidad y persistencia | `infra/repos/` (memoria y JSON) implementando `TripRepository`; logging estructurado. **Ya hecho:** cargador de tarifas desde `config/rates.toml` (US-07), repositorio JSON del historial con la carpeta de datos (TK-04) y comando `historico` con el día como argumento (US-05). **Pendiente:** logs en la carpeta `TAXIMETRO_LOG_DIR` (US-06) y la cobertura del núcleo (TK-03) | US-05 (#6), US-06 (#7), US-07 (#8), TK-03 (#13), TK-04 (#14) |
 | **Fase 3** — Arquitectura y UI | Refuerzo de la POO y de las responsabilidades; acceso con contraseña (hash, sin texto plano); `ui/gui/` en tkinter sin bloquear la ventana | US-08 (#9), US-09 (#10), TK-05 (#15) |
 | **Fase 4** — Producción | Repositorio SQL; `ui/api/` (API REST: iniciar, cambiar, finalizar, consultar); panel web para el responsable de flota; despliegue con un único comando (Docker) | TK-06 (#16), TK-07 (#17), TK-08 (#18), TK-09 (#19) |
 | **Transversal** | README con instrucciones y justificación de librerías; tablero y Conventional Commits | TK-10 (#20), TK-11 (#21) |

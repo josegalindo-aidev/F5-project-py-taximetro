@@ -34,7 +34,7 @@ El ciclo es **rojo, verde, refactor**, con **un solo test cada vez**:
 | Unitarias del núcleo | `tests/unit/core/` | `Tariff`, `Trip` y `TripService`, aislados y sin entrada/salida, con repositorios simulados |
 | Unitarias de la CLI | `tests/unit/ui/` | `Cli` y `format_euros`, con una consola simulada |
 | Integración | `tests/integration/` | La infraestructura y el arranque, con ficheros temporales: cargador de tarifas, comportamiento propio del repositorio JSON (fichero dañado, escritura atómica) y `main` |
-| **Aceptación** | `tests/acceptance/` | Cada historia de usuario **de principio a fin** por la consola, con el nombre `test_usNN_…`. Las de la Fase 2 arrancan `main` entero sobre una carpeta de datos temporal (`test_fase2_historial.py`) |
+| **Aceptación** | `tests/acceptance/` | Cada historia de usuario **de principio a fin** por la consola, con el nombre `test_usNN_…`. Las de la Fase 2 arrancan `main` entero sobre una carpeta de datos temporal (`test_fase2_historial.py`, `test_us05_historico.py`), con las utilidades comunes en `tests/acceptance/helpers.py` |
 | Contrato | `tests/contract/` | Reglas que debe cumplir **cualquier implementación** de un puerto: el repositorio en memoria y el JSON pasan la misma batería (apartado 5) |
 | Convenciones | `tests/test_conventions.py` | Reglas del repositorio, como la cabecera de los `.py` |
 
@@ -114,6 +114,7 @@ El código recibe sus dependencias (reloj, teclado, pantalla) en lugar de crearl
 | `FakeClock` | `tests/fakes.py` | Reloj que avanza a mano con `advance(segundos)`: simula el paso del tiempo sin esperar |
 | `FakeWallClock` | `tests/fakes.py` | Reloj de pared (fecha y hora con zona) controlable: simula *cuándo* ocurre algo, sin depender del día real |
 | `BrokenRepository` | `tests/fakes.py` | Repositorio cuyo guardado siempre falla (`OSError`): prueba que el total se muestra aunque no se pueda guardar |
+| `UnreadableHistoryRepository` | `tests/fakes.py` | Repositorio cuya consulta siempre falla (`TripHistoryError`): prueba que `historico` muestra el error y el programa sigue |
 | `ScriptedInput` | `tests/fakes.py` | Consola que devuelve comandos y avanza el reloj entre ellos |
 | `tariff` | `tests/conftest.py` | La tarifa oficial (0,02 y 0,05 €/s), disponible en cualquier test |
 | `tmp_path` | `pytest` | Carpeta temporal para los ficheros de prueba: nunca se toca `config/` ni `data/` |
