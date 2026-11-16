@@ -3,6 +3,7 @@
 """Registro de eventos de operación en disco (US-06)."""
 
 import json
+import tempfile
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -85,3 +86,21 @@ def test_una_carpeta_de_logs_valida_se_crea_y_no_deja_ficheros(tmp_path):
 
     assert folder.is_dir()
     assert list(folder.iterdir()) == []  # la comprobación no deja restos
+
+
+def test_la_comprobacion_prueba_a_escribir_dentro_de_la_carpeta_de_logs(tmp_path, monkeypatch):
+    folder = tmp_path / "logs"
+    real_temporary_file = tempfile.TemporaryFile
+
+    def temporary_file(*args, dir=None, **kwargs):
+        if dir == folder:  # solo en la carpeta de logs no hay permiso de escritura
+            raise PermissionError(13, "Permission denied")
+        return real_temporary_file(*args, dir=dir, **kwargs)
+
+    monkeypatch.setattr(tempfile, "TemporaryFile", temporary_file)
+
+    with pytest.raises(EventLogError) as info:
+        FileEventLog(folder).check()
+
+    assert "Permission denied" in str(info.value)
+    assert str(folder) in str(info.value)
