@@ -104,3 +104,18 @@ def test_la_comprobacion_prueba_a_escribir_dentro_de_la_carpeta_de_logs(tmp_path
 
     assert "Permission denied" in str(info.value)
     assert str(folder) in str(info.value)
+
+
+@pytest.mark.parametrize("subcarpetas", [[], ["2026", "logs"]], ids=["directa", "anidada"])
+def test_si_la_carpeta_de_logs_es_un_fichero_el_mensaje_lo_explica_con_claridad(
+    tmp_path, subcarpetas
+):
+    no_es_carpeta = tmp_path / "no-soy-carpeta"
+    no_es_carpeta.write_text("esto es un fichero", encoding="utf-8")
+    log = FileEventLog(no_es_carpeta.joinpath(*subcarpetas))
+
+    with pytest.raises(EventLogError) as info:
+        log.check()
+
+    expected = f"La carpeta de logs '{no_es_carpeta}' no es una carpeta: es un fichero."
+    assert str(info.value) == expected
