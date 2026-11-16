@@ -39,7 +39,10 @@ class JsonTripRepository:
             return []
         try:
             records = json.loads(self._path.read_text(encoding="utf-8"))
-        except ValueError as error:  # JSON mal formado o texto que no es UTF-8
+        except json.JSONDecodeError as error:
+            where = f"línea {error.lineno}, columna {error.colno}"
+            raise self._damaged(f"no es un JSON válido ({where})") from error
+        except ValueError as error:  # texto que no es UTF-8
             raise self._damaged(str(error)) from error
         except OSError as error:  # existe, pero no se puede leer (permisos, es una carpeta...)
             raise TripHistoryError(
