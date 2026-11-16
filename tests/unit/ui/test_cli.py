@@ -10,7 +10,13 @@ from taximetro.core.trip_service import TripService
 from taximetro.infra.repos.memory import InMemoryTripRepository
 from taximetro.ui.cli.app import Cli
 from taximetro.ui.cli.format import format_euros
-from tests.fakes import BrokenRepository, FakeClock, FakeWallClock, ScriptedInput
+from tests.fakes import (
+    BrokenRepository,
+    FakeClock,
+    FakeWallClock,
+    ScriptedInput,
+    UnreadableHistoryRepository,
+)
 
 
 @pytest.fixture
@@ -202,6 +208,16 @@ def test_historico_de_un_dia_sin_carreras_nombra_ese_dia(tariff, clock):
     assert "El 2026-11-10 no hubo carreras finalizadas." in out
     assert "Hoy no hay" not in out
     assert "Total del día" not in out
+
+
+def test_historico_con_el_historial_ilegible_muestra_el_error_y_sigue_funcionando(tariff, clock):
+    steps = [(0, "historico"), (0, "iniciar")]
+
+    out = run_cli(tariff, clock, steps, repository=UnreadableHistoryRepository())
+
+    assert "El historial 'trips.json' está dañado: no se puede leer" in out
+    assert "Carrera iniciada" in out  # el programa sigue aceptando comandos
+    assert "Traceback" not in out
 
 
 @pytest.mark.parametrize(

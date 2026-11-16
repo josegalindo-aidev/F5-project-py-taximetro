@@ -4,6 +4,8 @@
 
 from datetime import UTC, datetime, timedelta
 
+from taximetro.core.errors import TripHistoryError
+
 
 class FakeWallClock:
     """Reloj de pared controlable: cumple el puerto `WallClock`."""
@@ -39,6 +41,16 @@ class BrokenRepository:
 
     def list_finished(self, day):
         return []
+
+
+class UnreadableHistoryRepository:
+    """Repositorio cuyo historial no se puede leer: consultarlo siempre falla."""
+
+    def save(self, trip):
+        pass
+
+    def list_finished(self, day):
+        raise TripHistoryError("El historial 'trips.json' está dañado: no se puede leer")
 
 
 class ScriptedInput:
