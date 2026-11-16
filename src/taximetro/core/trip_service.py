@@ -49,7 +49,11 @@ class TripService:
         return trip
 
     def set_state(self, state: State) -> None:
-        self._require_active().change_state(state, at=self._clock())
+        trip = self._require_active()
+        trip.change_state(state, at=self._clock())
+        self._event_log.record(
+            self._wall_clock(), "estado_cambiado", carrera=trip.id, estado=state.value
+        )
 
     def current_amount(self) -> Decimal:
         return self._require_active().amount_at(self._clock())
