@@ -195,3 +195,16 @@ def test_historico_de_un_dia_sin_carreras_nombra_ese_dia(tariff, clock):
     assert "El 2026-11-10 no hubo carreras finalizadas." in out
     assert "Hoy no hay" not in out
     assert "Total del día" not in out
+
+
+@pytest.mark.parametrize(
+    "day_text",
+    ["ayer", "2026-13-45", "2026-11", "11/11/2026", "2026-11-10 2026-11-11"],
+    ids=["texto", "mes-y-dia-imposibles", "fecha-a-medias", "formato-espanol", "dos-fechas"],
+)
+def test_historico_con_una_fecha_no_valida_avisa_y_no_cierra_el_programa(tariff, clock, day_text):
+    out = run_cli(tariff, clock, [(0, f"historico {day_text}"), (0, "iniciar")])
+
+    assert f"Fecha no válida: '{day_text}'. Usa el formato AAAA-MM-DD." in out
+    assert "Carrera iniciada" in out  # el programa sigue aceptando comandos
+    assert "Carreras del" not in out
