@@ -4,6 +4,7 @@
 
 import pytest
 
+from taximetro.core.day_report import DayReport
 from taximetro.core.trip_service import TripService
 from taximetro.infra.repos.memory import InMemoryTripRepository
 from taximetro.ui.cli.app import Cli
@@ -17,8 +18,9 @@ def clock() -> FakeClock:
 
 def session(tariff, clock, steps) -> str:
     out: list[str] = []
-    service = TripService(tariff, clock, FakeWallClock(), InMemoryTripRepository(), FakeEventLog())
-    Cli(service, ScriptedInput(clock, steps), out.append).run()
+    repository, wall_clock = InMemoryTripRepository(), FakeWallClock()
+    service = TripService(tariff, clock, wall_clock, repository, FakeEventLog())
+    Cli(service, DayReport(repository, wall_clock), ScriptedInput(clock, steps), out.append).run()
     return "\n".join(out)
 
 

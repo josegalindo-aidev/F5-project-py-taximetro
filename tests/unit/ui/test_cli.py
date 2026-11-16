@@ -4,6 +4,7 @@ from decimal import Decimal
 
 import pytest
 
+from taximetro.core.day_report import DayReport
 from taximetro.core.trip_service import TripService
 from taximetro.infra.repos.memory import InMemoryTripRepository
 from taximetro.ui.cli.app import Cli
@@ -28,8 +29,10 @@ def run_cli(tariff, clock, steps, repository=None, notes=()) -> str:
     """Ejecuta la CLI con una consola simulada y devuelve todo lo impreso."""
     out: list[str] = []
     repository = repository if repository is not None else InMemoryTripRepository()
-    service = TripService(tariff, clock, FakeWallClock(), repository, FakeEventLog())
-    Cli(service, ScriptedInput(clock, steps), out.append, notes).run()
+    wall_clock = FakeWallClock()
+    service = TripService(tariff, clock, wall_clock, repository, FakeEventLog())
+    report = DayReport(repository, wall_clock)
+    Cli(service, report, ScriptedInput(clock, steps), out.append, notes).run()
     return "\n".join(out)
 
 

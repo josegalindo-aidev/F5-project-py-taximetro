@@ -9,6 +9,7 @@ from datetime import date
 from decimal import Decimal
 from functools import partial
 
+from taximetro.core.day_report import DayReport
 from taximetro.core.errors import (
     InvalidTimestamp,
     TaximetroError,
@@ -45,11 +46,13 @@ class Cli:
     def __init__(
         self,
         service: TripService,
+        report: DayReport,
         input_fn: Callable[[str], str] = input,
         output_fn: Callable[[str], None] = print,
         notes: Sequence[str] = (),
     ) -> None:
         self._service = service
+        self._report = report
         self._input = input_fn
         self._print = output_fn
         self._notes = notes
