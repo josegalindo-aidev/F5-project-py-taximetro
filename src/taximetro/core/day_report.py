@@ -19,11 +19,11 @@ class DaySummary:
 
     @property
     def count(self) -> int:
-        raise NotImplementedError
+        return len(self.trips)
 
     @property
     def total(self) -> Decimal:
-        raise NotImplementedError
+        return sum((trip.total for trip in self.trips), Decimal(0))
 
 
 class DayReport:
@@ -32,7 +32,8 @@ class DayReport:
         self._wall_clock = wall_clock
 
     def today(self) -> date:
-        raise NotImplementedError
+        return self._wall_clock().date()
 
     def for_day(self, day: date | None = None) -> DaySummary:
-        raise NotImplementedError
+        day = day or self.today()
+        return DaySummary(day, tuple(self._repository.list_finished(day)))
