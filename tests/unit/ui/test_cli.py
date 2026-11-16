@@ -1,11 +1,9 @@
 # Proyecto: py-taximetro
 # fuente: tests/unit/ui/test_cli.py
-from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
 
-from taximetro.core.trip import Trip
 from taximetro.core.trip_service import TripService
 from taximetro.infra.repos.memory import InMemoryTripRepository
 from taximetro.ui.cli.app import Cli
@@ -17,6 +15,7 @@ from tests.fakes import (
     FakeWallClock,
     ScriptedInput,
     UnreadableHistoryRepository,
+    saved_trip,
 )
 
 
@@ -142,14 +141,6 @@ def test_sin_notas_no_se_imprime_nada_extra(tariff, clock):
 
 
 # US-05: histórico de carreras. El reloj de pared de las pruebas marca el 11/11/2026 a las 10:00.
-def saved_trip(repository, trip_id, start, end, total) -> None:
-    """Guarda una carrera ya terminada; `start` y `end` son tuplas (día, hora, minuto)."""
-    started = datetime(2026, 11, *start, tzinfo=UTC)
-    finished = datetime(2026, 11, *end, tzinfo=UTC)
-    trip = Trip.restore(trip_id, started, finished, Decimal("30"), Decimal("20"), Decimal(total))
-    repository.save(trip)
-
-
 def test_historico_lista_las_carreras_de_hoy_con_hora_importe_y_resumen(tariff, clock):
     repository = InMemoryTripRepository()
     saved_trip(repository, "tarde", (11, 11, 40), (11, 11, 52), "12.30")  # se guarda antes...
