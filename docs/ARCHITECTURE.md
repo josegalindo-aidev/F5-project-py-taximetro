@@ -173,6 +173,7 @@ La entrada no distingue mayúsculas ni espacios sobrantes, e ignora las líneas 
 | `repos/memory.py` | `InMemoryTripRepository`: guarda las carreras en una lista; se pierden al cerrar el programa. Lo usan las pruebas. | ✅ |
 | `repos/json_file.py` | `JsonTripRepository(path)`: guarda las carreras terminadas en un fichero JSON. Escritura atómica, errores claros y creación de carpetas (ver abajo). | ✅ |
 | `repos/validation.py` | `ensure_can_be_saved`: reglas comunes a todo repositorio (la carrera debe estar terminada y tener fechas). | ✅ |
+| `folders.py` | `file_in_the_way(carpeta)`: devuelve el fichero que impide usar una ruta como carpeta (la propia ruta o la primera que exista por encima), o `None`. La comparten el repositorio JSON y el registro de eventos; cada uno pone su propio mensaje. | ✅ |
 | `repos/` (SQL) | Repositorio relacional (Fase 4). | ⏳ |
 | `event_log.py` | `FileEventLog(carpeta)`: escribe cada evento como una línea JSON en el fichero del día. `check()` crea la carpeta, prueba que se puede escribir y convierte los fallos en `EventLogError` (ver abajo). | ✅ |
 
@@ -210,7 +211,7 @@ Las fechas se guardan en ISO 8601 con zona horaria y los importes y segundos **c
 | Comportamiento | Cómo |
 |---|---|
 | **Escritura atómica** | `save` escribe en un fichero temporal en la misma carpeta y lo intercambia con `os.replace`. Un corte a mitad de escritura deja el historial anterior intacto; si algo falla, se borra el temporal |
-| **Historial dañado** | Un fichero vacío, que no es JSON, que no es una lista o con un registro ilegible lanza `TripHistoryError` con la ruta y el motivo. `save` valida **antes** de escribir, así que un fichero dañado nunca se sobrescribe |
+| **Historial dañado** | Un fichero vacío, que no es JSON, que no es una lista o con un registro ilegible lanza `TripHistoryError` con la ruta y un motivo legible: la línea y la columna donde falla el JSON, que no está en UTF-8 o el número de la carrera ilegible, sin textos técnicos del intérprete. `save` valida **antes** de escribir, así que un fichero dañado nunca se sobrescribe |
 | **Historial ilegible** | Un fichero que existe pero no se puede leer (permisos, es una carpeta) también lanza `TripHistoryError` |
 | **Carpeta de datos inválida** | Si la carpeta de datos, o la primera que exista por encima, es un fichero, lanza `TripHistoryError` nombrándola. Un primer arranque, con las carpetas aún sin crear, sigue siendo válido |
 | **Primer arranque** | Si el fichero no existe, el historial está vacío. Listar nunca crea nada; guardar crea las carpetas que falten |
@@ -447,6 +448,7 @@ Con `time.monotonic` el reloj no retrocede, y `TripService` descarta la carrera 
 | D21 | **Formato JSON Lines, un fichero por día**; nombres de evento en español y estado con el valor interno (`stopped`, `moving`). | Una línea por evento se lee y se filtra con herramientas, no se corrompe si el programa se corta, y el formato de datos no depende del idioma de la consola. |
 | D22 | **Un fallo del registro nunca impide cobrar, pero una carpeta de logs inservible impide arrancar.** | Cobrar es lo primero durante la jornada; pero los logs existen para auditar, y arrancar sin poder auditar vaciaría su propósito. |
 | D23 | **La cobertura del núcleo tiene un umbral del 90 %**, con ramas, configurado en `pyproject.toml`, y un test impide relajarlo. | El criterio de TK-03 se cumple hoy con un 100 %, pero solo un umbral que falla evita que baje sin que nadie lo note, y el núcleo es donde está el negocio. |
+| D24 | **Los mensajes de error se redactan para quien no conoce Python**: nombran la ruta y dicen dónde mirar (línea y columna, número de carrera, qué fichero estorba), sin el texto de la excepción. | Los errores salen por pantalla al arrancar, donde los lee un responsable y no un programador; para depurar queda el error original encadenado (`from error`). |
 
 ---
 
@@ -459,17 +461,17 @@ El proyecto se desarrolla con **TDD**: primero el test en rojo, luego el código
 | Unitarias del núcleo | `tests/unit/core/` | `Tariff`, `Trip` y `TripService` aislados | 51 |
 | Unitarias de la CLI | `tests/unit/ui/` | `Cli` y `format_euros` con consola simulada | 30 |
 | Aceptación | `tests/acceptance/` | US-01 a US-04 (4), el historial en disco, TK-04 (3), el histórico del día, US-05 (4), y los logs, US-06 (4), de principio a fin | 15 |
-| Convenciones | `tests/test_conventions.py` | Cabecera de cada `.py` (crece con cada fichero nuevo) | 65 |
+| Convenciones | `tests/test_conventions.py` | Cabecera de cada `.py` (crece con cada fichero nuevo) | 67 |
 | Calidad | `tests/test_quality_gates.py` | Umbral de cobertura del núcleo en `pyproject.toml` (TK-03) | 3 |
-| Integración | `tests/integration/` | Cargador de tarifas (30), repositorio JSON (19), registro de eventos (7) y arranque (25), con ficheros temporales | 81 |
+| Integración | `tests/integration/` | Cargador de tarifas (30), repositorio JSON (28), registro de eventos (9) y arranque (25), con ficheros temporales | 92 |
 | Contrato | `tests/contract/` | La misma batería de 9 tests para el repositorio en memoria y el JSON | 18 |
-| | | **Total** | **263** |
+| | | **Total** | **276** |
 
 **Dobles de prueba** (`tests/fakes.py`): `FakeClock` (reloj que avanza a mano), `FakeWallClock` (reloj de pared controlable), `FakeEventLog` (registro de eventos en memoria), `FailingEventLog` (registro cuya escritura siempre falla), `BrokenRepository` (guardado que siempre falla), `UnreadableHistoryRepository` (consultar el historial siempre falla) y `ScriptedInput` (consola que devuelve comandos y avanza el reloj entre ellos). Los fixtures compartidos están en `tests/conftest.py`.
 
 **Cobertura:** 99 % al cerrar US-06. Todos los módulos están al 100 % salvo `__main__.py`, cuya única línea sin cubrir es la llamada `raise SystemExit(main())` del bloque `if __name__ == "__main__"`. El **núcleo** (`core/`) está al **100 %** en líneas y ramas, y `pyproject.toml` exige un mínimo del **90 %**: `python -m pytest --cov` falla si baja (decisión D23).
 
-**Pruebas de mutación manuales:** el cargador y el arranque se comprobaron rompiendo el código a propósito (quitar una validación, cambiar un mensaje, alterar el orden de los `except`…). Los tests detectaron todas las roturas deliberadas que se probaron al cerrar US-07. Al cerrar TK-04 se repitió sobre el repositorio JSON, el arranque, `TripService`, la CLI y la validación común: 26 mutantes, 26 detectados. Al cerrar US-05 y US-06 se repitió con el histórico y el registro de eventos: de 41 mutantes, 39 se detectaron a la primera y los dos supervivientes llevaron a eliminar código muerto y a cubrir un hueco de pruebas.
+**Pruebas de mutación manuales:** el cargador y el arranque se comprobaron rompiendo el código a propósito (quitar una validación, cambiar un mensaje, alterar el orden de los `except`…). Los tests detectaron todas las roturas deliberadas que se probaron al cerrar US-07. Al cerrar TK-04 se repitió sobre el repositorio JSON, el arranque, `TripService`, la CLI y la validación común: 26 mutantes, 26 detectados. Al cerrar US-05 y US-06 se repitió con el histórico y el registro de eventos: de 41 mutantes, 39 se detectaron a la primera y los dos supervivientes llevaron a eliminar código muerto y a cubrir un hueco de pruebas. Con los mensajes de error claros se probaron 14 mutantes más: 13 se detectaron y el superviviente, un mensaje con la ruta equivocada, llevó a comparar el texto exacto.
 
 ---
 
