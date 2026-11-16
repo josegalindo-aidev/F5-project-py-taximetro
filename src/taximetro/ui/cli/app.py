@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
+from decimal import Decimal
 
 from taximetro.core.errors import (
     InvalidTimestamp,
@@ -55,6 +56,7 @@ class Cli:
             "mover": lambda: self._set_state(State.MOVING),
             "estado": self._status,
             "finalizar": self._finish,
+            "historico": self._history,
             "ayuda": lambda: self._print(HELP),
         }
 
@@ -110,6 +112,16 @@ class Cli:
             self._print(f"Aviso: {error}")
             return
         self._print(f"Carrera finalizada. Total: {format_euros(total)}")
+
+    def _history(self) -> None:
+        trips = self._service.finished_on()
+        self._print("Carreras de hoy:")
+        total = Decimal(0)
+        for number, trip in enumerate(trips, start=1):
+            start, end = f"{trip.started_at:%H:%M}", f"{trip.finished_at:%H:%M}"
+            self._print(f"  {number}. {start} - {end}  {format_euros(trip.total)}")
+            total += trip.total
+        self._print(f"Total del día: {len(trips)} carreras, {format_euros(total)}")
 
     def _goodbye(self) -> None:
         if self._service.active is not None:
