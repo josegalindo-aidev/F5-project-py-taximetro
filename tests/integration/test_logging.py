@@ -5,6 +5,9 @@
 import json
 from datetime import datetime, timedelta, timezone
 
+import pytest
+
+from taximetro.core.errors import EventLogError
 from taximetro.infra.event_log import FileEventLog
 
 MADRID = timezone(timedelta(hours=1))
@@ -58,3 +61,27 @@ def test_los_acentos_y_la_enie_se_escriben_legibles(tmp_path):
     text = (folder / "taximetro-2026-11-16.jsonl").read_text(encoding="utf-8")
     assert "ñandú" in text
     assert "u00f1" not in text  # sin la secuencia de escape de JSON para la ñ
+
+
+# Comprobación al arrancar: la carpeta de logs debe poder usarse, o el programa no arranca.
+@pytest.mark.parametrize("subcarpetas", [[], ["2026", "logs"]], ids=["directa", "anidada"])
+def test_una_carpeta_de_logs_que_es_un_fichero_se_rechaza_nombrandola(tmp_path, subcarpetas):
+    no_es_carpeta = tmp_path / "no-soy-carpeta"
+    no_es_carpeta.write_text("esto es un fichero", encoding="utf-8")
+    log = FileEventLog(no_es_carpeta.joinpath(*subcarpetas))
+
+    with pytest.raises(EventLogError) as info:
+        log.check()
+
+    assert "carpeta de logs" in str(info.value)
+    assert "no-soy-carpeta" in str(info.value)
+    assert no_es_carpeta.read_text(encoding="utf-8") == "esto es un fichero"  # no se toca
+
+
+def test_una_carpeta_de_logs_valida_se_crea_y_no_deja_ficheros(tmp_path):
+    folder = tmp_path / "datos" / "logs"
+
+    FileEventLog(folder).check()
+
+    assert folder.is_dir()
+    assert list(folder.iterdir()) == []  # la comprobación no deja restos

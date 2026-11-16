@@ -41,6 +41,10 @@ class TripHistoryError(TaximetroError):
     """El fichero del historial está dañado o no tiene el formato esperado."""
 
 
+class EventLogError(TaximetroError):
+    """La carpeta del registro de eventos no se puede usar."""
+
+
 class TripNotSaved(TaximetroError):
     """La carrera se cobró, pero no se pudo guardar en el historial."""
 
