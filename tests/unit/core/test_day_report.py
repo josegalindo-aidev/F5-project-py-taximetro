@@ -8,8 +8,9 @@ from decimal import Decimal
 import pytest
 
 from taximetro.core.day_report import DayReport
+from taximetro.core.trip_service import TripService
 from taximetro.infra.repos.memory import InMemoryTripRepository
-from tests.fakes import FakeWallClock, saved_trip
+from tests.fakes import FakeClock, FakeEventLog, FakeWallClock, saved_trip
 
 DAY = date(2026, 11, 10)
 
@@ -69,3 +70,28 @@ def test_sin_indicar_el_dia_se_usa_el_de_hoy_segun_el_reloj_de_pared(report, rep
 
     assert summary.day == date(2026, 11, 11)
     assert [trip.id for trip in summary.trips] == ["hoy"]
+
+
+def test_las_carreras_que_cobra_el_servicio_aparecen_en_el_dia_en_que_terminan(
+    tariff, repository, wall_clock
+):
+    clock = FakeClock()
+    service = TripService(tariff, clock, wall_clock, repository, FakeEventLog())
+    report = DayReport(repository, wall_clock)
+
+    def one_trip(seconds):
+        trip = service.start()
+        clock.advance(seconds)
+        wall_clock.advance(seconds)
+        service.finish()
+        return trip
+
+    first = one_trip(10)
+    second = one_trip(5)
+    wall_clock.advance(24 * 3600)  # pasa un día
+    third = one_trip(3)
+
+    assert [t.id for t in report.for_day(date(2026, 11, 11)).trips] == [first.id, second.id]
+    assert [t.id for t in report.for_day(date(2026, 11, 12)).trips] == [third.id]
+    assert report.for_day(date(2026, 11, 10)).count == 0
+    assert report.for_day().day == date(2026, 11, 12)  # sin día, el de hoy
