@@ -16,7 +16,7 @@ Proyecto del bootcamp de Factoría F5, desarrollado con **TDD** y una arquitectu
 | Fase | Contenido | Estado |
 |---|---|---|
 | **1 · MVP CLI** | Iniciar, cambiar de estado y finalizar carreras desde la consola; encadenar carreras | ✅ Implementada |
-| 2 · Observabilidad y persistencia | Logs, historial en disco, histórico del día y tarifas en fichero (ya hecho) | En desarrollo |
+| 2 · Observabilidad y persistencia | Logs de operación, historial en disco, histórico del día, tarifas en fichero y umbral de cobertura | ✅ Implementada |
 | 3 · Arquitectura y UI | Acceso con contraseña e interfaz gráfica para tablet | ⏳ Planificada |
 | 4 · Producción | Base de datos, API REST, panel web y despliegue con un comando | ⏳ Planificada |
 
@@ -153,7 +153,7 @@ Se sigue el [versionado semántico](https://semver.org/lang/es/) (`MAJOR.MINOR.P
 | Fase | Versión | Estado |
 |---|---|---|
 | 1 · MVP CLI | `0.1.0` | ✅ [Publicada](https://github.com/josegalindo-aidev/F5-project-py-taximetro/releases/tag/v0.1.0) |
-| 2 · Observabilidad y persistencia | `0.2.0` | ⏳ Planificada |
+| 2 · Observabilidad y persistencia | `0.2.0` | ✅ [Publicada](https://github.com/josegalindo-aidev/F5-project-py-taximetro/releases/tag/v0.2.0) |
 | 3 · Arquitectura y UI | `0.3.0` | ⏳ Planificada |
 | 4 · Producción | `1.0.0` | ⏳ Planificada |
 
