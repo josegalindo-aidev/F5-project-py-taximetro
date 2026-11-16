@@ -148,3 +148,14 @@ def test_historico_lista_las_carreras_de_hoy_con_hora_importe_y_resumen(tariff, 
     assert out.index("1. 09:05 - 09:12  7,25 €") < out.index("2. 11:40 - 11:52  12,30 €")
     assert "Total del día: 2 carreras, 19,55 €" in out
     assert "99,99" not in out
+
+
+def test_historico_sin_carreras_lo_dice_y_no_muestra_un_resumen(tariff, clock):
+    repository = InMemoryTripRepository()
+    saved_trip(repository, "ayer", (10, 23, 50), (10, 23, 59), "99.99")  # no es de hoy
+
+    out = run_cli(tariff, clock, [(0, "historico")], repository)
+
+    assert "Hoy no hay carreras finalizadas." in out
+    assert "Total del día" not in out
+    assert "Carreras de hoy:" not in out
