@@ -30,3 +30,9 @@ class TripRepository(Protocol):
     def list_finished(self, day: date) -> list[Trip]:
         """Carreras terminadas en `day`, de la más antigua a la más reciente."""
         ...
+
+
+class EventLog(Protocol):
+    def record(self, at: datetime, event: str, **data: str) -> None:
+        """Registra un evento de operación con su marca de tiempo (`at`, con zona horaria)."""
+        ...
