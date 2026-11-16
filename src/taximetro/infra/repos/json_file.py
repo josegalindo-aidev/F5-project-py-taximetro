@@ -26,10 +26,13 @@ class JsonTripRepository:
         self._write(records)
 
     def list_finished(self, day: date) -> list[Trip]:
-        try:
-            trips = [_from_record(record) for record in self._read()]
-        except (KeyError, TypeError, ValueError, ArithmeticError) as error:
-            raise self._damaged(f"registro no válido ({error!r})") from error
+        trips = []
+        for number, record in enumerate(self._read(), start=1):
+            try:
+                trips.append(_from_record(record))
+            except (KeyError, TypeError, ValueError, ArithmeticError) as error:
+                detail = f"la carrera n.º {number} tiene un dato que falta o no es válido"
+                raise self._damaged(detail) from error
         of_day = [trip for trip in trips if trip.finished_at.date() == day]
         return sorted(of_day, key=lambda trip: trip.finished_at)
 
@@ -42,8 +45,8 @@ class JsonTripRepository:
         except json.JSONDecodeError as error:
             where = f"línea {error.lineno}, columna {error.colno}"
             raise self._damaged(f"no es un JSON válido ({where})") from error
-        except ValueError as error:  # texto que no es UTF-8
-            raise self._damaged(str(error)) from error
+        except UnicodeDecodeError as error:
+            raise self._damaged("no está guardado en UTF-8") from error
         except OSError as error:  # existe, pero no se puede leer (permisos, es una carpeta...)
             raise TripHistoryError(
                 f"No se pudo leer el historial '{self._path}': {error.strerror or error}"
