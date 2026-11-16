@@ -62,10 +62,10 @@ class TripService:
         return total
 
     def today(self) -> date:
-        raise NotImplementedError
+        return self._wall_clock().date()
 
     def finished_on(self, day: date | None = None) -> list[Trip]:
-        raise NotImplementedError
+        return self._repository.list_finished(day or self.today())
 
     def _require_active(self) -> Trip:
         if self._active is None:
