@@ -59,7 +59,6 @@ class Cli:
             "mover": lambda: self._set_state(State.MOVING),
             "estado": self._status,
             "finalizar": self._finish,
-            "historico": self._history,
             "ayuda": lambda: self._print(HELP),
         }
 
