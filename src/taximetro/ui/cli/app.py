@@ -119,7 +119,11 @@ class Cli:
         self._print(f"Carrera finalizada. Total: {format_euros(total)}")
 
     def _history(self, day_text: str = "") -> None:
-        day = date.fromisoformat(day_text) if day_text else None
+        try:
+            day = date.fromisoformat(day_text) if day_text else None
+        except ValueError:
+            self._print(f"Fecha no válida: '{day_text}'. Usa el formato AAAA-MM-DD.")
+            return
         trips = self._service.finished_on(day)
         if not trips:
             if day:
