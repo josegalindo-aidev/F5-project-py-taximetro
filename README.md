@@ -67,7 +67,7 @@ El programa muestra las instrucciones al arrancar y espera comandos:
 
 Tarifas (Zona EMT Madrid, junio 2025): **0,02 €/s** parado (o a menos de 20 km/h) y **0,05 €/s** en movimiento. El estado lo indicas tú con `parar` y `mover`. Las tarifas se leen de `config/rates.toml` al arrancar, así que se pueden cambiar sin tocar el código.
 
-Cada carrera finalizada se guarda en un historial en disco, que se conserva al cerrar el programa. Al arrancar, el programa indica la ruta (`Historial: …`). La carpeta de datos se elige con la variable `TAXIMETRO_DATA_DIR` y, por defecto, es `data/` en la raíz del proyecto.
+Cada carrera finalizada se guarda en un historial en disco, que se conserva al cerrar el programa. Al arrancar, el programa indica la ruta del historial (`Historial: …`) y la de los logs (`Logs: …`). La carpeta de datos se elige con la variable `TAXIMETRO_DATA_DIR` y, por defecto, es `data/` en la raíz del proyecto. El inicio, los cambios de estado y el fin de cada carrera se registran, con su hora, en la carpeta de logs (`TAXIMETRO_LOG_DIR`, por defecto `logs/`) para poder auditar el uso.
 
 Manual completo, con ejemplos, cómo configurar las tarifas y dónde se guardan los datos, y mensajes de error: [docs/USAGE.md](docs/USAGE.md).
 
@@ -79,7 +79,7 @@ Todas las pruebas:
 python -m pytest
 ```
 
-Solo las **pruebas de aceptación** (US-01 a US-04 y el historial en disco, de principio a fin):
+Solo las **pruebas de aceptación** (cada historia de usuario, de principio a fin):
 
 ```bash
 python -m pytest tests/acceptance -v
@@ -109,6 +109,7 @@ tests/         Pruebas unitarias, de integración, de aceptación y de convencio
 docs/          Documentación y backlog
 config/        Tarifas (rates.toml)
 data/          Historial de carreras (trips.json); se crea al guardar la primera y Git lo ignora
+logs/          Logs de operación, un fichero por día; se crea al arrancar y Git lo ignora
 ```
 
 ## Documentación

@@ -8,7 +8,7 @@ fuente: docs/ARCHITECTURE.md
 | | |
 |---|---|
 | **Proyecto** | py-taximetro (prototipo de TaxiTech Solutions S.L.) |
-| **Alcance que refleja** | Fase 1 (MVP CLI): US-01 a US-04 y TK-02, más de la Fase 2: US-07 (tarifas en fichero de configuración), TK-04 (historial de carreras en disco) y US-05 (histórico del día) |
+| **Alcance que refleja** | Fase 1 (MVP CLI): US-01 a US-04 y TK-02, más de la Fase 2: US-07 (tarifas en fichero de configuración), TK-04 (historial de carreras en disco), US-05 (histórico del día) y US-06 (logs de operación) |
 | **Fuente de verdad** | El código en `src/taximetro/`. Si algo de este documento y el código difieren, manda el código. |
 
 > **Convención de estado.** Cada elemento lleva una marca: ✅ implementado y probado, 🟡 existe pero aún no se usa, ⏳ planificado (no existe todavía).
@@ -26,7 +26,8 @@ El taxímetro funciona por línea de comandos (Fase 1, más US-07 y TK-04 de la 
 - permite encadenar carreras sin cerrar el programa,
 - lee sus tarifas de un fichero de configuración, de modo que cambiar el cobro no exige tocar el código (US-07),
 - guarda cada carrera finalizada en un historial en disco que se conserva al cerrar el programa, sin que un fallo del historial esconda nunca el importe (TK-04),
-- permite consultar las carreras de hoy o de otro día, con su hora, su importe y el total (US-05).
+- permite consultar las carreras de hoy o de otro día, con su hora, su importe y el total (US-05),
+- registra el inicio, los cambios de estado y el fin de cada carrera en un log de operación para auditar el uso, sin que un fallo del log impida cobrar (US-06).
 
 Este documento describe **cómo está construido** (módulos), **qué hace** (arquitectura funcional) y **por qué** se diseñó así (decisiones). Las fases 2 a 4 se recogen como evolución prevista en la sección 9.
 
@@ -44,7 +45,7 @@ Tres paquetes, un punto de arranque:
 |---|---|---|
 | `core/` | Reglas de negocio y casos de uso. No importa nada de `ui/` ni de `infra/`. | ✅ |
 | `ui/` | Puertas de entrada del usuario: CLI hoy; GUI y API después. | ✅ CLI · ⏳ GUI, API |
-| `infra/` | Adaptadores a recursos externos (carga de configuración, repositorios de datos, logging). | ✅ carga de tarifas y repositorios (memoria y JSON) · ⏳ repositorio SQL, logging |
+| `infra/` | Adaptadores a recursos externos (carga de configuración, repositorios de datos, logging). | ✅ carga de tarifas, repositorios (memoria y JSON) y registro de eventos · ⏳ repositorio SQL |
 | `__main__.py` | Punto de arranque: crea las piezas reales y las conecta. | ✅ |
 
 **Regla de dependencias (solo hacia dentro):**
@@ -74,17 +75,19 @@ flowchart LR
         TAR["Tariff"]
         ST["State"]
         ERR["errors"]
-        PORTS["ports<br/>Clock · WallClock · TripRepository"]
+        PORTS["ports<br/>Clock · WallClock · TripRepository · EventLog"]
     end
 
     subgraph INFRA["infra (adaptadores)"]
         LOADER["tariff_loader<br/>load_tariff"]
         REPOS["repos<br/>memoria · JSON<br/>SQL planificado"]
+        EVLOG["event_log<br/>FileEventLog"]
     end
 
     MAIN --> CLI
     MAIN --> LOADER
     MAIN --> REPOS
+    MAIN --> EVLOG
     LOADER --> TAR
     CLI --> SVC
     SVC --> TRIP
@@ -93,6 +96,7 @@ flowchart LR
     TAR --> ST
     SVC -. usa .-> PORTS
     REPOS -. implementa .-> PORTS
+    EVLOG -. implementa .-> PORTS
     GUI -.-> SVC
     API -.-> SVC
 ```
@@ -108,11 +112,11 @@ Los bloques marcados como `planificado` (GUI, API y el repositorio SQL) aún no 
 | Módulo | Responsabilidad | Depende de | Estado |
 |---|---|---|---|
 | `state.py` | Enumeración `State` con los estados del taxi: `STOPPED` y `MOVING`. Vive en su propio módulo para evitar una importación circular entre `Tariff` y `Trip`. | — | ✅ |
-| `errors.py` | Jerarquía de errores del dominio, con `TaximetroError` como base. Incluye `TariffFileError` (fallos al cargar las tarifas) y, para el historial: `InvalidTripRecord` (carrera que no se puede guardar: sin terminar o sin fechas), `TripHistoryError` (fichero dañado o ilegible) y `TripNotSaved` (la carrera se cobró pero no se guardó; lleva el total). | — | ✅ |
+| `errors.py` | Jerarquía de errores del dominio, con `TaximetroError` como base. Incluye `TariffFileError` (fallos al cargar las tarifas) y, para el historial: `InvalidTripRecord` (carrera que no se puede guardar: sin terminar o sin fechas), `TripHistoryError` (fichero dañado o ilegible) `TripNotSaved` (la carrera se cobró pero no se guardó; lleva el total) y `EventLogError` (la carpeta del registro de eventos no se puede usar). | — | ✅ |
 | `tariff.py` | `Tariff`: precio por segundo parado y en movimiento. Es inmutable (`frozen`), rechaza valores negativos y expone `rate_for(state)`. Los valores reales los aporta el cargador de tarifas (`infra/`). | `state`, `errors` | ✅ |
 | `trip.py` | `Trip`: una carrera. Acumula el importe por tramos, cierra un tramo en cada cambio de estado y redondea el total a céntimos. **No conoce ningún reloj**: recibe el instante (`at`) en cada operación y, opcionalmente, la fecha y hora de pared (`when`). Acumula también los segundos parado y en movimiento, y expone `started_at` y `finished_at`. `Trip.restore(...)` reconstruye una carrera ya terminada a partir de los datos guardados. | `state`, `tariff`, `errors` | ✅ |
-| `trip_service.py` | `TripService`: caso de uso. Mantiene la carrera activa, lee los dos relojes y delega el cálculo en `Trip`. Al finalizar guarda la carrera en el repositorio y libera la carrera activa para encadenar la siguiente, **incluso si el guardado falla** (en ese caso lanza `TripNotSaved` con el total). | `trip`, `tariff`, `ports`, `errors` | ✅ |
-| `ports.py` | Contratos (`Protocol`): `Clock` (segundos monotónicos, para medir duraciones), `WallClock` (fecha y hora con zona horaria, para saber *cuándo*) y `TripRepository` (`save` y `list_finished`). | `trip` | ✅ |
+| `trip_service.py` | `TripService`: caso de uso. Mantiene la carrera activa, lee los dos relojes y delega el cálculo en `Trip`. Al finalizar guarda la carrera en el repositorio y libera la carrera activa para encadenar la siguiente, **incluso si el guardado falla** (en ese caso lanza `TripNotSaved` con el total). Anota en el registro de eventos el inicio, los cambios de estado, el fin y las carreras no guardadas; si el registro falla, lo ignora (`_log`). | `trip`, `tariff`, `ports`, `errors` | ✅ |
+| `ports.py` | Contratos (`Protocol`): `Clock` (segundos monotónicos, para medir duraciones), `WallClock` (fecha y hora con zona horaria, para saber *cuándo*), `TripRepository` (`save` y `list_finished`) y `EventLog` (`record`: anota un evento con su hora). | `trip` | ✅ |
 
 **API pública de `Trip`:**
 
@@ -170,6 +174,7 @@ La entrada no distingue mayúsculas ni espacios sobrantes, e ignora las líneas 
 | `repos/json_file.py` | `JsonTripRepository(path)`: guarda las carreras terminadas en un fichero JSON. Escritura atómica, errores claros y creación de carpetas (ver abajo). | ✅ |
 | `repos/validation.py` | `ensure_can_be_saved`: reglas comunes a todo repositorio (la carrera debe estar terminada y tener fechas). | ✅ |
 | `repos/` (SQL) | Repositorio relacional (Fase 4). | ⏳ |
+| `event_log.py` | `FileEventLog(carpeta)`: escribe cada evento como una línea JSON en el fichero del día. `check()` crea la carpeta, prueba que se puede escribir y convierte los fallos en `EventLogError` (ver abajo). | ✅ |
 
 El cargador se organiza en una función pública y cuatro privadas, cada una con una sola responsabilidad:
 
@@ -212,6 +217,29 @@ Las fechas se guardan en ISO 8601 con zona horaria y los importes y segundos **c
 | **Qué carreras lista** | `list_finished(día)` devuelve las que **terminan** ese día, de la más antigua a la más reciente por hora de fin |
 
 El repositorio en memoria y el JSON pasan la misma batería de tests de contrato (`tests/contract/`).
+#### Registro de eventos
+
+`TripService` anota los eventos de operación en un `EventLog`. La implementación real, `FileEventLog`, escribe **JSON Lines**: una línea por evento, en un fichero por día (`taximetro-AAAA-MM-DD.jsonl`) dentro de la carpeta de logs.
+
+```json
+{"ts": "2026-11-16T10:05:00.123456+01:00", "evento": "carrera_iniciada", "carrera": "a1b2c3d4"}
+```
+
+| Evento | Quién lo registra | Datos |
+|---|---|---|
+| `carrera_iniciada` | `TripService.start` | `carrera` |
+| `estado_cambiado` | `TripService.set_state` | `carrera`, `estado` (valor interno: `stopped` o `moving`) |
+| `carrera_finalizada` | `TripService.finish`, antes de guardar | `carrera`, `total` (texto) |
+| `carrera_no_guardada` | `TripService.finish`, si falla el historial | `carrera`, `motivo` |
+
+| Comportamiento | Cómo |
+|---|---|
+| **Hora determinista** | La marca de tiempo es la del reloj de pared inyectado, no la del sistema. `start` y `finish` leen el reloj **una sola vez**, así que el log y el historial coinciden |
+| **Un fichero por día** | El nombre sale de la fecha del evento, y cada evento se añade abriendo el fichero en modo *append*: una caída no deja eventos sin volcar y nada se pisa |
+| **Acentos legibles** | `ensure_ascii=False`: la `ñ` y las tildes se escriben tal cual |
+| **Comprobación al arrancar** | `check()` crea la carpeta, prueba a escribir con un fichero temporal dentro de ella y lanza `EventLogError` con la ruta y el motivo. Como el log sirve para auditar, `main` **aborta** (código 1) si falla |
+| **Fallo durante la jornada** | `TripService._log` ignora los `OSError` del registro: cobrar es lo primero, y el taxista nunca ve un error por culpa del log |
+
 ### 3.4 Arranque — `src/taximetro/__main__.py` ✅
 
 Es el único módulo que conoce todas las piezas (*composition root*). Se ejecuta con `python -m taximetro` o con el comando `taximetro` (definido en `pyproject.toml`).
@@ -220,8 +248,9 @@ Es el único módulo que conoce todas las piezas (*composition root*). Se ejecut
 |---|---|
 | `default_rates_path(environ)` | Decide de dónde se leen las tarifas: la variable `TAXIMETRO_RATES` (una variable vacía se ignora) o, si no existe, `config/rates.toml` en la raíz del proyecto. |
 | `default_data_dir(environ)` | Decide la carpeta de datos: la variable `TAXIMETRO_DATA_DIR` (vacía se ignora) o, si no existe, `data/` en la raíz del proyecto. El historial es `trips.json` dentro de esa carpeta. |
-| `build_service(rates_path, repository, clock, wall_clock)` | Carga las tarifas y crea el `TripService` con el repositorio que se le da. Es donde se unen la infraestructura y el núcleo. |
-| `main(rates_path, data_dir, clock, input_fn, output_fn)` | Elige las rutas, crea el repositorio JSON, construye el servicio, **lee el historial una vez** para detectar un fichero dañado y lanza la CLI con la nota `Historial: <ruta>`. Devuelve el **código de salida**: `0` si todo va bien y `1` si el fichero de tarifas o el historial son inválidos, con el mensaje `Error: …` en `stderr`. Captura `TariffFileError` y `TripHistoryError`. |
+| `default_log_dir(environ)` | Decide la carpeta de logs: la variable `TAXIMETRO_LOG_DIR` (vacía se ignora) o, si no existe, `logs/` en la raíz del proyecto. Es independiente de la carpeta de datos. |
+| `build_service(rates_path, repository, event_log, clock, wall_clock)` | Carga las tarifas y crea el `TripService` con el repositorio y el registro de eventos que se le dan. Es donde se unen la infraestructura y el núcleo. |
+| `main(rates_path, data_dir, clock, input_fn, output_fn)` | Elige las rutas, crea el repositorio JSON, construye el servicio, **lee el historial una vez** para detectar un fichero dañado, **comprueba la carpeta de logs** y lanza la CLI con las notas `Historial: <ruta>` y `Logs: <ruta>`. Devuelve el **código de salida**: `0` si todo va bien y `1` si el fichero de tarifas o el historial son inválidos, con el mensaje `Error: …` en `stderr`. Captura `TariffFileError`, `TripHistoryError` y `EventLogError`. |
 
 Reloj, entrada y salida se inyectan, por lo que el arranque completo se prueba sin teclado ni esperas.
 
@@ -231,7 +260,7 @@ Reloj, entrada y salida se inyectan, por lo que el arranque completo se prueba s
 |---|---|---|---|
 | Tarifas (un fichero, solo lectura) | `TAXIMETRO_RATES` | `config/rates.toml` | ✅ |
 | Historial (`trips.json`) | `TAXIMETRO_DATA_DIR` | `data/` | ✅ |
-| Logs de ejecución | `TAXIMETRO_LOG_DIR` | `logs/` | ⏳ reservada para US-06 |
+| Logs de operación | `TAXIMETRO_LOG_DIR` | `logs/` | ✅ |
 
 Los datos y los logs son **dos carpetas independientes** para poder montarlas en ubicaciones distintas en producción. Se configuran como carpetas y no como ficheros porque la escritura atómica necesita crear un temporal junto al fichero final, y montar un único fichero lo impediría (decisión D18).
 
@@ -240,7 +269,6 @@ Los datos y los logs son **dos carpetas independientes** para poder montarlas en
 | Elemento | Situación |
 |---|---|
 | `ui/gui/`, `ui/api/` | Paquetes vacíos que reservan el sitio de las fases 3 y 4. |
-| `TAXIMETRO_LOG_DIR` | Carpeta de logs decidida pero sin código: llega con US-06. |
 
 ---
 
@@ -289,6 +317,7 @@ Un tramo termina en cada cambio de estado o al finalizar. Ejemplo (10 s parado, 
 | **US-07** (#8) | Tarifas en fichero de configuración | `load_tariff`, `default_rates_path`, `build_service`, `main` | `test_el_servicio_cobra_con_las_tarifas_del_fichero` y `test_con_un_fichero_valido_lanza_la_cli_con_esas_tarifas_y_devuelve_0` |
 | **TK-04** (#14) | Historial guardado en disco | `JsonTripRepository`, `ensure_can_be_saved`, `TripService.finish`, `Trip.restore`, `default_data_dir`, `main` | `test_las_carreras_terminadas_se_conservan_al_reiniciar_el_programa` y el resto de `test_fase2_historial.py` |
 | **US-05** (#6) | Ver el histórico del día (o de otro día) | `Cli._history`, `Cli._dispatch`, `TripService.finished_on` y `today`, `TripRepository.list_finished` | `test_us05_el_historico_del_dia_conserva_las_carreras_al_reiniciar` y el resto de `test_us05_historico.py` |
+| **US-06** (#7) | Logs de operación | `EventLog`, `FileEventLog`, `TripService._log`, `default_log_dir`, `main` | `test_us06_una_carrera_deja_inicio_cambio_de_estado_y_fin_con_marca_de_tiempo` y el resto de `test_us06_logs.py` |
 | — | Consulta del importe en curso (`estado`) | `Cli._status`, `TripService.current_amount`, `Trip.amount_at` | `test_estado_con_carrera_muestra_estado_e_importe` |
 
 ### 4.3 Ciclo de vida de una carrera
@@ -316,12 +345,14 @@ sequenceDiagram
     participant K as Clock
     participant T as Trip
     participant R as TripRepository
+    participant E as EventLog
 
     U->>C: iniciar
     C->>S: start
     S->>K: lee el reloj
     K-->>S: t0
     S->>T: crea Trip y start en t0
+    S->>E: carrera_iniciada
     C-->>U: Carrera iniciada
 
     U->>C: mover
@@ -329,6 +360,7 @@ sequenceDiagram
     S->>K: lee el reloj
     K-->>S: t1
     S->>T: change_state MOVING en t1
+    S->>E: estado_cambiado
     Note over T: cierra el tramo parado<br/>(t1 - t0) x tarifa parado
 
     U->>C: finalizar
@@ -337,12 +369,13 @@ sequenceDiagram
     K-->>S: t2
     S->>T: finish en t2
     T-->>S: total Decimal
+    S->>E: carrera_finalizada
     S->>R: save de la carrera
     S-->>C: total
     C-->>U: Carrera finalizada. Total: 0,70 €
 ```
 
-### 4.5 Arranque: tarifas e historial
+### 4.5 Arranque: tarifas, historial y logs
 
 ```mermaid
 flowchart TD
@@ -351,14 +384,19 @@ flowchart TD
     G --> H["JsonTripRepository<br/>trips.json"]
     B --> C["build_service"]
     H --> C
+    A --> L["default_log_dir<br/>TAXIMETRO_LOG_DIR o logs/"]
+    L --> M["FileEventLog"]
+    M --> C
     C --> D["load_tariff<br/>leer y validar el TOML"]
     D -->|válido| I["leer el historial una vez"]
-    I -->|legible| E["Tariff, TripService y Cli<br/>con la nota Historial"]
+    I -->|legible| J["comprobar la carpeta de logs"]
+    J -->|usable| E["Tariff, TripService y Cli<br/>con las notas Historial y Logs"]
+    J -->|EventLogError| F
     D -->|TariffFileError| F["Error por stderr<br/>código de salida 1"]
     I -->|TripHistoryError| F
 ```
 
-Si el fichero de tarifas o el historial son inválidos el programa **no arranca**: no existe ninguna tarifa por defecto (decisión D11) y un historial dañado no se sobrescribe (decisión D17).
+Si el fichero de tarifas, el historial o la carpeta de logs son inválidos el programa **no arranca**: no existe ninguna tarifa por defecto (decisión D11), un historial dañado no se sobrescribe (decisión D17) y sin logs no hay auditoría (decisión D22).
 
 ### 4.6 Manejo de errores
 
@@ -374,6 +412,7 @@ Los errores de negocio son excepciones del dominio. `Cli._dispatch` las captura 
 | `TariffFileError` | El fichero de tarifas falta, no se puede leer, está mal formado o tiene valores inválidos | No llega a la CLI: al arrancar se imprime `Error: …` por `stderr` y el código de salida es 1 |
 | `TripHistoryError` | El historial está dañado (no es JSON, no es una lista, un registro ilegible), existe pero no se puede leer, o la carpeta de datos es en realidad un fichero | **Al arrancar**: `Error: …` por `stderr` y código de salida 1. **Al finalizar una carrera**: `TripService` lo convierte en `TripNotSaved` |
 | `TripNotSaved` | La carrera se cobró, pero no se pudo guardar (`OSError` o `TripHistoryError`) | La CLI muestra `Carrera finalizada. Total: …` y después `Aviso: No se pudo guardar la carrera en el historial: …` |
+| `EventLogError` | La carpeta de logs no se puede crear o no se puede escribir en ella | **Al arrancar**: `Error: …` por `stderr` y código de salida 1. **Durante la jornada**, un fallo de escritura del registro se ignora (`TripService._log`) y no llega a la CLI |
 | `InvalidTripRecord` | Intentar guardar una carrera sin terminar o sin fechas: un error de programación | **No** se convierte en `TripNotSaved`, para no disfrazarlo de problema del disco |
 
 Con `time.monotonic` el reloj no retrocede, y `TripService` descarta la carrera al finalizar, por lo que `InvalidTimestamp` y `TripAlreadyFinished` solo aparecen al usar `Trip` directamente o con un reloj de pruebas.
@@ -403,6 +442,9 @@ Con `time.monotonic` el reloj no retrocede, y `TripService` descarta la carrera 
 | D17 | **Un historial dañado o ilegible impide arrancar y nunca se sobrescribe**; un fallo al guardar nunca esconde el total (`TripNotSaved`). | Perder datos es peor que no arrancar, y el taxista debe poder cobrar siempre. |
 | D18 | **Datos y logs en carpetas independientes**, configuradas como **directorios** (`TAXIMETRO_DATA_DIR`, `TAXIMETRO_LOG_DIR`), no como ficheros. | Se pueden montar en ubicaciones distintas en producción, y la escritura atómica necesita crear un temporal junto al fichero final. |
 | D19 | **Contrato común** para los repositorios y la validación de guardado en un único sitio (`ensure_can_be_saved`). | Una implementación nueva solo se añade a la fixture parametrizada; las reglas no se duplican. |
+| D20 | **El registro de eventos es un puerto propio (`EventLog`)**, con la hora del reloj de pared inyectado, y no el módulo `logging` de Python. | La marca de tiempo es determinista en las pruebas, no hay configuración global compartida y se prueba con el mismo estilo que el resto (doble de pruebas, mutación). |
+| D21 | **Formato JSON Lines, un fichero por día**; nombres de evento en español y estado con el valor interno (`stopped`, `moving`). | Una línea por evento se lee y se filtra con herramientas, no se corrompe si el programa se corta, y el formato de datos no depende del idioma de la consola. |
+| D22 | **Un fallo del registro nunca impide cobrar, pero una carpeta de logs inservible impide arrancar.** | Cobrar es lo primero durante la jornada; pero los logs existen para auditar, y arrancar sin poder auditar vaciaría su propósito. |
 
 ---
 
@@ -412,19 +454,19 @@ El proyecto se desarrolla con **TDD**: primero el test en rojo, luego el código
 
 | Nivel | Carpeta | Qué prueba | Pruebas |
 |---|---|---|---|
-| Unitarias del núcleo | `tests/unit/core/` | `Tariff`, `Trip` y `TripService` aislados | 44 |
+| Unitarias del núcleo | `tests/unit/core/` | `Tariff`, `Trip` y `TripService` aislados | 51 |
 | Unitarias de la CLI | `tests/unit/ui/` | `Cli` y `format_euros` con consola simulada | 30 |
-| Aceptación | `tests/acceptance/` | US-01 a US-04 (4), el historial en disco, TK-04 (3), y el histórico del día, US-05 (4), de principio a fin | 11 |
-| Convenciones | `tests/test_conventions.py` | Cabecera de cada `.py` (crece con cada fichero nuevo) | 57 |
-| Integración | `tests/integration/` | Cargador de tarifas (30), repositorio JSON (19) y arranque (18), con ficheros temporales | 67 |
+| Aceptación | `tests/acceptance/` | US-01 a US-04 (4), el historial en disco, TK-04 (3), el histórico del día, US-05 (4), y los logs, US-06 (4), de principio a fin | 15 |
+| Convenciones | `tests/test_conventions.py` | Cabecera de cada `.py` (crece con cada fichero nuevo) | 63 |
+| Integración | `tests/integration/` | Cargador de tarifas (30), repositorio JSON (19), registro de eventos (7) y arranque (25), con ficheros temporales | 81 |
 | Contrato | `tests/contract/` | La misma batería de 9 tests para el repositorio en memoria y el JSON | 18 |
-| | | **Total** | **227** |
+| | | **Total** | **258** |
 
-**Dobles de prueba** (`tests/fakes.py`): `FakeClock` (reloj que avanza a mano), `FakeWallClock` (reloj de pared controlable), `BrokenRepository` (guardado que siempre falla), `UnreadableHistoryRepository` (consultar el historial siempre falla) y `ScriptedInput` (consola que devuelve comandos y avanza el reloj entre ellos). Los fixtures compartidos están en `tests/conftest.py`.
+**Dobles de prueba** (`tests/fakes.py`): `FakeClock` (reloj que avanza a mano), `FakeWallClock` (reloj de pared controlable), `FakeEventLog` (registro de eventos en memoria), `FailingEventLog` (registro cuya escritura siempre falla), `BrokenRepository` (guardado que siempre falla), `UnreadableHistoryRepository` (consultar el historial siempre falla) y `ScriptedInput` (consola que devuelve comandos y avanza el reloj entre ellos). Los fixtures compartidos están en `tests/conftest.py`.
 
-**Cobertura:** 99 % al cerrar TK-04. Todos los módulos están al 100 % salvo `__main__.py`, cuya única línea sin cubrir es la llamada `raise SystemExit(main())` del bloque `if __name__ == "__main__"`.
+**Cobertura:** 99 % al cerrar US-06. Todos los módulos están al 100 % salvo `__main__.py`, cuya única línea sin cubrir es la llamada `raise SystemExit(main())` del bloque `if __name__ == "__main__"`.
 
-**Pruebas de mutación manuales:** el cargador y el arranque se comprobaron rompiendo el código a propósito (quitar una validación, cambiar un mensaje, alterar el orden de los `except`…). Los tests detectaron todas las roturas deliberadas que se probaron al cerrar US-07. Al cerrar TK-04 se repitió sobre el repositorio JSON, el arranque, `TripService`, la CLI y la validación común: 26 mutantes, 26 detectados.
+**Pruebas de mutación manuales:** el cargador y el arranque se comprobaron rompiendo el código a propósito (quitar una validación, cambiar un mensaje, alterar el orden de los `except`…). Los tests detectaron todas las roturas deliberadas que se probaron al cerrar US-07. Al cerrar TK-04 se repitió sobre el repositorio JSON, el arranque, `TripService`, la CLI y la validación común: 26 mutantes, 26 detectados. Al cerrar US-05 y US-06 se repitió con el histórico y el registro de eventos: de 41 mutantes, 39 se detectaron a la primera y los dos supervivientes llevaron a eliminar código muerto y a cubrir un hueco de pruebas.
 
 ---
 
@@ -480,7 +522,7 @@ python -m ruff check src tests
 
 | Fase | Módulos nuevos o cambios | Issues |
 |---|---|---|
-| **Fase 2** — Observabilidad y persistencia | `infra/repos/` (memoria y JSON) implementando `TripRepository`; logging estructurado. **Ya hecho:** cargador de tarifas desde `config/rates.toml` (US-07), repositorio JSON del historial con la carpeta de datos (TK-04) y comando `historico` con el día como argumento (US-05). **Pendiente:** logs en la carpeta `TAXIMETRO_LOG_DIR` (US-06) y la cobertura del núcleo (TK-03) | US-05 (#6), US-06 (#7), US-07 (#8), TK-03 (#13), TK-04 (#14) |
+| **Fase 2** — Observabilidad y persistencia | `infra/repos/` (memoria y JSON) implementando `TripRepository` y `event_log.py` implementando `EventLog`. **Ya hecho:** cargador de tarifas desde `config/rates.toml` (US-07), repositorio JSON del historial con la carpeta de datos (TK-04), comando `historico` con el día como argumento (US-05) y registro de eventos de operación en la carpeta `TAXIMETRO_LOG_DIR` (US-06). **Pendiente:** la medición de cobertura del núcleo (TK-03) | US-05 (#6), US-06 (#7), US-07 (#8), TK-03 (#13), TK-04 (#14) |
 | **Fase 3** — Arquitectura y UI | Refuerzo de la POO y de las responsabilidades; acceso con contraseña (hash, sin texto plano); `ui/gui/` en tkinter sin bloquear la ventana | US-08 (#9), US-09 (#10), TK-05 (#15) |
 | **Fase 4** — Producción | Repositorio SQL; `ui/api/` (API REST: iniciar, cambiar, finalizar, consultar); panel web para el responsable de flota; despliegue con un único comando (Docker) | TK-06 (#16), TK-07 (#17), TK-08 (#18), TK-09 (#19) |
 | **Transversal** | README con instrucciones y justificación de librerías; tablero y Conventional Commits | TK-10 (#20), TK-11 (#21) |
@@ -501,5 +543,6 @@ python -m ruff check src tests
 | L6 | El módulo `taximetro.core.ports` importa `Trip`, lo que acopla el contrato al modelo. Es aceptable mientras `Trip` sea el único agregado. | Revisar si el modelo crece. |
 | L7 | **La validación se repite**: el cargador comprueba que los valores no sean negativos (para poder nombrar la clave y el fichero) y `Tariff` también lo comprueba. | Duplicación asumida: `Tariff` debe protegerse aunque se construya por otro camino, como la API de la Fase 4. |
 | L8 | **Las rutas por defecto dependen de la instalación en modo desarrollo**: se calculan desde la ubicación del código (`parents[2]`), y en una instalación normal no apuntarían a `config/` ni a `data/`. | Usar `TAXIMETRO_RATES` y `TAXIMETRO_DATA_DIR`; en la Fase 4 (Docker) se fijarán explícitamente. |
-| L9 | **`TAXIMETRO_LOG_DIR` está reservada pero sin efecto**: aún no hay logs. | US-06. |
+| L9 | **Un fallo al escribir el log durante la jornada se ignora en silencio**: el taxista cobra, pero el responsable no se entera de que faltan eventos. | Valorar un aviso único por sesión. |
+| L10 | **Los logs no rotan**: hay un fichero por día y se acumulan; archivarlos o borrarlos es tarea del responsable. | Suficiente para el prototipo; con volumen real, rotación o retención. |
 
