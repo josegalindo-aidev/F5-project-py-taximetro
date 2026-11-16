@@ -45,6 +45,7 @@ class TripService:
         trip = Trip(self._tariff, trip_id=uuid4().hex[:8])
         trip.start(at=self._clock(), when=self._wall_clock())
         self._active = trip
+        self._event_log.record(self._wall_clock(), "carrera_iniciada", carrera=trip.id)
         return trip
 
     def set_state(self, state: State) -> None:
