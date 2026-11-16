@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from uuid import uuid4
 
@@ -46,15 +46,13 @@ class TripService:
         now = self._wall_clock()
         trip.start(at=self._clock(), when=now)
         self._active = trip
-        self._event_log.record(now, "carrera_iniciada", carrera=trip.id)
+        self._log(now, "carrera_iniciada", carrera=trip.id)
         return trip
 
     def set_state(self, state: State) -> None:
         trip = self._require_active()
         trip.change_state(state, at=self._clock())
-        self._event_log.record(
-            self._wall_clock(), "estado_cambiado", carrera=trip.id, estado=state.value
-        )
+        self._log(self._wall_clock(), "estado_cambiado", carrera=trip.id, estado=state.value)
 
     def current_amount(self) -> Decimal:
         return self._require_active().amount_at(self._clock())
@@ -64,11 +62,11 @@ class TripService:
         now = self._wall_clock()
         total = trip.finish(at=self._clock(), when=now)
         self._active = None  # libre para la siguiente carrera, aunque falle el guardado
-        self._event_log.record(now, "carrera_finalizada", carrera=trip.id, total=str(total))
+        self._log(now, "carrera_finalizada", carrera=trip.id, total=str(total))
         try:
             self._repository.save(trip)
         except (OSError, TripHistoryError) as error:
-            self._event_log.record(now, "carrera_no_guardada", carrera=trip.id, motivo=str(error))
+            self._log(now, "carrera_no_guardada", carrera=trip.id, motivo=str(error))
             raise TripNotSaved(total, str(error)) from error
         return total
 
@@ -77,6 +75,13 @@ class TripService:
 
     def finished_on(self, day: date | None = None) -> list[Trip]:
         return self._repository.list_finished(day or self.today())
+
+    def _log(self, at: datetime, event: str, **data: str) -> None:
+        """Registra un evento; si el registro falla, se ignora: cobrar es lo primero."""
+        try:
+            self._event_log.record(at, event, **data)
+        except OSError:
+            pass
 
     def _require_active(self) -> Trip:
         if self._active is None:
