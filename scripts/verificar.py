@@ -4,10 +4,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 MIN_PROJECT = 80.0
 MIN_CORE = 90.0
+
+# Lanza una orden y devuelve (código de salida, salida de texto).
+Runner = Callable[[list[str]], tuple[int, str]]
 
 
 @dataclass(frozen=True)
@@ -46,3 +50,16 @@ def coverage_failures(
     if core < min_core:
         failures.append(f"la cobertura del núcleo es {core}% y el mínimo es {min_core:g}%")
     return failures
+
+
+def parse_args(argv: Sequence[str]) -> Options:
+    raise NotImplementedError
+
+
+def run(
+    options: Options,
+    python: str,
+    runner: Runner,
+    output: Callable[[str], None] = print,
+) -> int:
+    raise NotImplementedError
