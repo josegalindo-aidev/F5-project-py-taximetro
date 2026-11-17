@@ -23,14 +23,26 @@ class Options:
 
 
 def pytest_command(python: str, options: Options) -> list[str]:
-    raise NotImplementedError
+    command = [python, "-m", "pytest", "-q", "-p", "no:cacheprovider"]
+    if not options.fast:
+        command += ["--cov=src/taximetro", "--cov-branch", "--cov-report="]
+    return command + list(options.paths)
 
 
 def parse_total_percent(report: str) -> float:
-    raise NotImplementedError
+    """Porcentaje de la línea `TOTAL` de un informe de `coverage report`."""
+    for line in reversed(report.splitlines()):
+        if line.startswith("TOTAL"):
+            return float(line.split()[-1].rstrip("%"))
+    raise ValueError("el informe de cobertura no tiene línea TOTAL")
 
 
 def coverage_failures(
     project: float, core: float, min_project: float = MIN_PROJECT, min_core: float = MIN_CORE
 ) -> list[str]:
-    raise NotImplementedError
+    failures = []
+    if project < min_project:
+        failures.append(f"la cobertura del proyecto es {project}% y el mínimo es {min_project:g}%")
+    if core < min_core:
+        failures.append(f"la cobertura del núcleo es {core}% y el mínimo es {min_core:g}%")
+    return failures
