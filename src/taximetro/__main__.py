@@ -5,7 +5,7 @@
 import os
 import sys
 import time
-from collections.abc import Callable, Mapping
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 
@@ -16,29 +16,8 @@ from taximetro.core.trip_service import TripService
 from taximetro.infra.event_log import FileEventLog
 from taximetro.infra.repos.json_file import JsonTripRepository
 from taximetro.infra.tariff_loader import load_tariff
+from taximetro.settings import Settings
 from taximetro.ui.cli.app import Cli
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-TRIPS_FILENAME = "trips.json"
-
-
-def _path_from_environment(environ: Mapping[str, str], name: str, default: Path) -> Path:
-    """Ruta de la variable de entorno `name`; vacía o ausente, usa `default`."""
-    configured = environ.get(name, "").strip()
-    return Path(configured) if configured else default
-
-
-def default_rates_path(environ: Mapping[str, str]) -> Path:
-    default = PROJECT_ROOT / "config" / "rates.toml"
-    return _path_from_environment(environ, "TAXIMETRO_RATES", default)
-
-
-def default_data_dir(environ: Mapping[str, str]) -> Path:
-    return _path_from_environment(environ, "TAXIMETRO_DATA_DIR", PROJECT_ROOT / "data")
-
-
-def default_log_dir(environ: Mapping[str, str]) -> Path:
-    return _path_from_environment(environ, "TAXIMETRO_LOG_DIR", PROJECT_ROOT / "logs")
 
 
 def local_now() -> datetime:
@@ -64,13 +43,11 @@ def main(
     input_fn: Callable[[str], str] = input,
     output_fn: Callable[[str], None] = print,
 ) -> int:
-    path = rates_path or default_rates_path(os.environ)
-    trips_file = (data_dir or default_data_dir(os.environ)) / TRIPS_FILENAME
-    repository = JsonTripRepository(trips_file)
-    log_dir = default_log_dir(os.environ)
-    event_log = FileEventLog(log_dir)
+    settings = Settings.from_environment(os.environ, rates_path=rates_path, data_dir=data_dir)
+    repository = JsonTripRepository(settings.trips_file)
+    event_log = FileEventLog(settings.log_dir)
     try:
-        service = build_service(path, repository, event_log, clock)
+        service = build_service(settings.rates_path, repository, event_log, clock)
         # Lee el historial una vez: si está dañado, se avisa ahora y no al cobrar una carrera.
         repository.list_finished(local_now().date())
         event_log.check()  # la auditoría es obligatoria: sin carpeta de logs usable no se arranca
@@ -78,7 +55,7 @@ def main(
         print(f"Error: {error}", file=sys.stderr)
         return 1
     report = DayReport(repository, local_now)
-    notes = [f"Historial: {trips_file}", f"Logs: {log_dir}"]
+    notes = [f"Historial: {settings.trips_file}", f"Logs: {settings.log_dir}"]
     Cli(service, report, input_fn, output_fn, notes).run()
     return 0
 

@@ -6,53 +6,12 @@ import json
 from decimal import Decimal
 from pathlib import Path
 
-import pytest
-
-from taximetro.__main__ import (
-    build_service,
-    default_data_dir,
-    default_log_dir,
-    default_rates_path,
-    main,
-)
+from taximetro.__main__ import build_service, main
 from taximetro.core.tariff import Tariff
 from taximetro.infra.repos.memory import InMemoryTripRepository
 from taximetro.infra.tariff_loader import load_tariff
+from taximetro.settings import PROJECT_ROOT
 from tests.fakes import FakeClock, FakeEventLog, ScriptedInput
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-
-
-def test_la_ruta_de_tarifas_sale_de_la_variable_de_entorno():
-    environ = {"TAXIMETRO_RATES": "/otra/ruta/rates.toml"}
-
-    assert default_rates_path(environ) == Path("/otra/ruta/rates.toml")
-
-
-def test_sin_variable_de_entorno_se_usa_el_fichero_del_proyecto():
-    assert default_rates_path({}) == PROJECT_ROOT / "config" / "rates.toml"
-
-
-@pytest.mark.parametrize("value", ["", "   "], ids=["vacia", "solo-espacios"])
-def test_una_variable_de_entorno_vacia_se_trata_como_no_definida(value):
-    assert default_rates_path({"TAXIMETRO_RATES": value}) == PROJECT_ROOT / "config" / "rates.toml"
-
-
-# TK-04: carpeta de datos (historial). Se configura como directorio, no como fichero, para poder
-# montarla aparte en producción: la escritura atómica necesita crear un temporal a su lado.
-def test_la_carpeta_de_datos_sale_de_la_variable_de_entorno():
-    environ = {"TAXIMETRO_DATA_DIR": "/otra/ruta/datos"}
-
-    assert default_data_dir(environ) == Path("/otra/ruta/datos")
-
-
-def test_sin_variable_de_entorno_los_datos_van_a_la_carpeta_data_del_proyecto():
-    assert default_data_dir({}) == PROJECT_ROOT / "data"
-
-
-@pytest.mark.parametrize("value", ["", "   "], ids=["vacia", "solo-espacios"])
-def test_una_variable_vacia_de_la_carpeta_de_datos_se_trata_como_no_definida(value):
-    assert default_data_dir({"TAXIMETRO_DATA_DIR": value}) == PROJECT_ROOT / "data"
 
 
 def test_el_fichero_de_tarifas_del_proyecto_es_valido():
@@ -230,29 +189,6 @@ def test_si_la_carpeta_de_datos_es_un_fichero_muestra_el_error_y_devuelve_1(tmp_
     assert "no es una carpeta" in captured.err
     assert "Traceback" not in captured.err
     assert out == []  # la CLI no llegó a arrancar
-
-
-# US-06: carpeta de los logs de operación, independiente de la de datos
-def test_la_carpeta_de_logs_sale_de_la_variable_de_entorno():
-    environ = {"TAXIMETRO_LOG_DIR": "/otra/ruta/logs"}
-
-    assert default_log_dir(environ) == Path("/otra/ruta/logs")
-
-
-def test_sin_variable_de_entorno_los_logs_van_a_la_carpeta_logs_del_proyecto():
-    assert default_log_dir({}) == PROJECT_ROOT / "logs"
-
-
-@pytest.mark.parametrize("value", ["", "   "], ids=["vacia", "solo-espacios"])
-def test_una_variable_vacia_de_la_carpeta_de_logs_se_trata_como_no_definida(value):
-    assert default_log_dir({"TAXIMETRO_LOG_DIR": value}) == PROJECT_ROOT / "logs"
-
-
-def test_los_logs_y_los_datos_son_carpetas_independientes():
-    environ = {"TAXIMETRO_LOG_DIR": "/montaje/logs", "TAXIMETRO_DATA_DIR": "/montaje/datos"}
-
-    assert default_log_dir(environ) == Path("/montaje/logs")
-    assert default_data_dir(environ) == Path("/montaje/datos")
 
 
 # US-06: si la carpeta de logs no se puede usar, el programa no arranca
