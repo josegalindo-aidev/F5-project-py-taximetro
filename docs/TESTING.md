@@ -121,10 +121,21 @@ python scripts/verificar.py
 | `python scripts/verificar.py --rapido` | Solo las pruebas, sin cobertura |
 | `python scripts/verificar.py --lint` | Lo anterior y además Ruff |
 | `python scripts/verificar.py tests/unit/core` | Solo esas pruebas (ejecución **parcial**) |
+| `python scripts/verificar.py --detalle` | Muestra el nombre de cada prueba y su resultado (una línea por prueba) |
 
 Las opciones se combinan: `python scripts/verificar.py --rapido --lint tests/unit`.
 
-Las líneas que escribe el script llevan la marca `[Verifica]`, para distinguirlas de la salida de pytest y de Ruff, que se muestra tal cual. La última línea es el veredicto:
+Las líneas que escribe el script llevan la marca `[Verifica]`, para distinguirlas de la salida de pytest y de Ruff, que se muestra tal cual. El script avanza por **pasos numerados** (`Paso 1 de 3: pruebas`, `Paso 2 de 3: cobertura`, `Paso 3 de 3: estilo`; el total depende de las opciones) y explica lo que va a mostrar:
+
+| Línea | Qué cuenta |
+|---|---|
+| `Leyenda: . superada · F fallida · E error · s omitida · [nn%] avance` | Cómo leer la salida de pytest: cada `.` es una prueba superada y el porcentaje del final de cada línea es el avance de la ejecución. Con `--detalle` dice que cada línea es una prueba |
+| `Pruebas: 323 superadas, 0 fallidas, 0 con error, 0 omitidas, en 2.21 s` | Resumen propio de las pruebas. Si no puede leer el resumen de pytest, lo dice |
+| `Columnas: Stmts, Miss, Branch, BrPart, Cover, Missing` | Qué significa cada columna de las tablas de cobertura: líneas ejecutables, sin cubrir, ramas, ramas a medias, porcentaje y números de las líneas sin cubrir |
+| `Resultado del proyecto: 99.64% (mínimo 80%)` | Cobertura de cada tabla frente a su mínimo. En una ejecución parcial dice `no se juzga: ejecución parcial` |
+| `Estilo: sin errores` | Resultado de Ruff (solo con `--lint`) |
+
+La última línea es el veredicto:
 
 - `[Verifica] VERDE: todo en orden`, con código de salida 0.
 - `[Verifica] ROJO: ...`, con código de salida 1 y los motivos: pruebas en rojo, cobertura por debajo del mínimo o errores de estilo.
