@@ -69,9 +69,6 @@ class TripService:
             return None
         return TripStatus(trip.state, trip.amount_at(self._clock()))
 
-    def current_amount(self) -> Decimal:
-        return self._require_active().amount_at(self._clock())
-
     def finish(self) -> Decimal:
         trip = self._require_active()
         now = self._wall_clock()
