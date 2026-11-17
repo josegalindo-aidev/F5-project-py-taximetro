@@ -64,7 +64,10 @@ class TripService:
         self._log(self._wall_clock(), "estado_cambiado", carrera=trip.id, estado=state.value)
 
     def status(self) -> TripStatus | None:
-        raise NotImplementedError
+        trip = self._active
+        if trip is None:
+            return None
+        return TripStatus(trip.state, trip.amount_at(self._clock()))
 
     def current_amount(self) -> Decimal:
         return self._require_active().amount_at(self._clock())
