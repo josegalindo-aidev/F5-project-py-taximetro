@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import subprocess
 import sys
 from collections.abc import Callable, Sequence
@@ -35,7 +36,8 @@ class Options:
 
 
 def pytest_command(python: str, options: Options) -> list[str]:
-    command = [python, "-m", "pytest", "-q", "-p", "no:cacheprovider"]
+    verbosity = "-v" if options.detail else "-q"
+    command = [python, "-m", "pytest", verbosity, "-p", "no:cacheprovider"]
     if not options.fast:
         command += ["--cov=src/taximetro", "--cov-branch", "--cov-report="]
     return command + list(options.paths)
@@ -50,8 +52,23 @@ class PytestSummary:
     seconds: float
 
 
+_SUMMARY_LINE = re.compile(r"((?:\d+ [a-z]+(?:, )?)+) in (\d+(?:\.\d+)?)s")
+
+
 def parse_test_summary(output: str) -> PytestSummary | None:
-    raise NotImplementedError
+    """Cuenta de pruebas de la última línea de resumen de pytest, si la hay."""
+    for line in reversed(output.splitlines()):
+        found = _SUMMARY_LINE.search(line)
+        if found:
+            counts = {word: int(number) for number, word in re.findall(r"(\d+) ([a-z]+)", found[1])}
+            return PytestSummary(
+                passed=counts.get("passed", 0),
+                failed=counts.get("failed", 0),
+                errors=counts.get("error", 0) + counts.get("errors", 0),
+                skipped=counts.get("skipped", 0),
+                seconds=float(found[2]),
+            )
+    return None
 
 
 def parse_total_percent(report: str) -> float:
@@ -81,8 +98,9 @@ def parse_args(argv: Sequence[str]) -> Options:
     parser.add_argument("paths", nargs="*", help="pruebas a ejecutar (por defecto, todas)")
     parser.add_argument("--rapido", action="store_true", help="solo las pruebas, sin cobertura")
     parser.add_argument("--lint", action="store_true", help="comprueba también el estilo (Ruff)")
+    parser.add_argument("--detalle", action="store_true", help="muestra el nombre de cada prueba")
     args = parser.parse_args(argv)
-    return Options(fast=args.rapido, lint=args.lint, paths=tuple(args.paths))
+    return Options(fast=args.rapido, lint=args.lint, paths=tuple(args.paths), detail=args.detalle)
 
 
 def run(
@@ -92,19 +110,52 @@ def run(
     output: Callable[[str], None] = print,
 ) -> int:
     reasons = []
+    steps = (
+        ["pruebas"] + ([] if options.fast else ["cobertura"]) + (["estilo"] if options.lint else [])
+    )
 
     def say(text: str) -> None:
         output(f"{TAG} {text}")
 
+    def announce(name: str) -> None:
+        say(f"Paso {steps.index(name) + 1} de {len(steps)}: {name}")
+
+    def coverage_report(label: str, minimum: float, *extra: str) -> float:
+        command = [python, "-m", "coverage", "report", "--precision=2", "--fail-under=0", *extra]
+        _, report = runner(command)
+        say(f"Cobertura del {label}:")
+        output(report.rstrip())
+        value = parse_total_percent(report)
+        note = "no se juzga: ejecución parcial" if options.partial else f"mínimo {minimum:g}%"
+        say(f"Resultado del {label}: {value:.2f}% ({note})")
+        return value
+
+    announce("pruebas")
+    if options.detail:
+        say("Leyenda: cada línea es una prueba y su resultado.")
+    else:
+        say("Leyenda: . superada · F fallida · E error · s omitida · [nn%] avance de la ejecución")
     tests_code, tests_output = runner(pytest_command(python, options))
     output(tests_output.rstrip())
+    summary = parse_test_summary(tests_output)
+    if summary is None:
+        say("Pruebas: no se pudo leer el resumen de pytest")
+    else:
+        say(
+            f"Pruebas: {summary.passed} superadas, {summary.failed} fallidas, "
+            f"{summary.errors} con error, {summary.skipped} omitidas, en {summary.seconds:g} s"
+        )
     if tests_code != 0:
         reasons.append("hay pruebas en rojo")
 
     if not options.fast:
-        project = _coverage(runner, python, output, f"{TAG} Cobertura del proyecto")
-        include = "--include=src/taximetro/core/*"
-        core = _coverage(runner, python, output, f"{TAG} Cobertura del núcleo", include)
+        announce("cobertura")
+        say(
+            "Columnas: Stmts = líneas ejecutables, Miss = sin cubrir, Branch = ramas, "
+            "BrPart = ramas a medias, Cover = % cubierto, Missing = líneas sin cubrir"
+        )
+        project = coverage_report("proyecto", MIN_PROJECT)
+        core = coverage_report("núcleo", MIN_CORE, "--include=src/taximetro/core/*")
         if options.partial:
             say("AVISO: ejecución parcial, la cobertura no es representativa y no se juzga.")
         else:
@@ -114,8 +165,10 @@ def run(
             reasons += failures
 
     if options.lint:
+        announce("estilo")
         lint_code, lint_output = runner([python, "-m", "ruff", "check", "."])
         output(lint_output.rstrip())
+        say("Estilo: sin errores" if lint_code == 0 else "Estilo: hay errores")
         if lint_code != 0:
             reasons.append("el estilo tiene errores")
 
@@ -124,17 +177,6 @@ def run(
         return 1
     say("VERDE: todo en orden")
     return 0
-
-
-def _coverage(
-    runner: Runner, python: str, output: Callable[[str], None], title: str, *extra: str
-) -> float:
-    _, report = runner(
-        [python, "-m", "coverage", "report", "--precision=2", "--fail-under=0", *extra]
-    )
-    output(f"{title}:")
-    output(report.rstrip())
-    return parse_total_percent(report)
 
 
 def launch(command: list[str]) -> tuple[int, str]:
