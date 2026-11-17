@@ -107,6 +107,30 @@ Ejecutar `--cov` con **un solo fichero de tests** dará una cobertura baja y fal
 python -m ruff check src tests
 ```
 
+### Todo de una vez: el script de verificación
+
+Para no escribir las órdenes una a una, `scripts/verificar.py` lanza las pruebas, la cobertura y, si se pide, el estilo, y termina con un veredicto. Solo usa la biblioteca estándar y el Python con el que se ejecuta, así que sirve con el entorno virtual activado desde cualquier terminal.
+
+```bash
+python scripts/verificar.py
+```
+
+| Orden | Qué hace |
+|---|---|
+| `python scripts/verificar.py` | Toda la suite con cobertura de ramas, informe del proyecto y del núcleo con las líneas sin cubrir, y veredicto |
+| `python scripts/verificar.py --rapido` | Solo las pruebas, sin cobertura |
+| `python scripts/verificar.py --lint` | Lo anterior y además Ruff |
+| `python scripts/verificar.py tests/unit/core` | Solo esas pruebas (ejecución **parcial**) |
+
+Las opciones se combinan: `python scripts/verificar.py --rapido --lint tests/unit`.
+
+Las líneas que escribe el script llevan la marca `[Verifica]`, para distinguirlas de la salida de pytest y de Ruff, que se muestra tal cual. La última línea es el veredicto:
+
+- `[Verifica] VERDE: todo en orden`, con código de salida 0.
+- `[Verifica] ROJO: ...`, con código de salida 1 y los motivos: pruebas en rojo, cobertura por debajo del mínimo o errores de estilo.
+
+Los mínimos son el 80 % para el proyecto y el 90 % para el núcleo, los mismos que comprueba el hook de pre-commit. En una ejecución **parcial** el script avisa de que la cobertura no es representativa y no la juzga: solo cuentan las pruebas (y el estilo, si se pidió).
+
 ### No se ejecutan con `python -m <fichero>`
 
 Un fichero de tests solo **define** funciones; quien las llama es `pytest`. Ejecutarlo como un programa termina **en silencio y con código de salida 0**, aunque alguna prueba fallara:
