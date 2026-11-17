@@ -49,7 +49,7 @@ def main(
     try:
         service = build_service(settings.rates_path, repository, event_log, clock)
         # Lee el historial una vez: si está dañado, se avisa ahora y no al cobrar una carrera.
-        repository.list_finished(local_now().date())
+        repository.check()
         event_log.check()  # la auditoría es obligatoria: sin carpeta de logs usable no se arranca
     except (TariffFileError, TripHistoryError, EventLogError) as error:
         print(f"Error: {error}", file=sys.stderr)
