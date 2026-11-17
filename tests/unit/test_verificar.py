@@ -7,8 +7,10 @@ import pytest
 from scripts.verificar import (
     TAG,
     Options,
+    PytestSummary,
     coverage_failures,
     parse_args,
+    parse_test_summary,
     parse_total_percent,
     pytest_command,
     run,
@@ -231,3 +233,137 @@ def test_los_argumentos_se_convierten_en_opciones():
     options = parse_args(["--rapido", "--lint", "tests/unit", "tests/contract"])
 
     assert options == Options(fast=True, lint=True, paths=("tests/unit", "tests/contract"))
+
+
+# --- Salida explicada: pasos, leyendas y resúmenes ---
+
+
+def test_el_modo_detallado_pide_a_pytest_el_nombre_de_cada_prueba():
+    detailed = [PY, "-m", "pytest", "-v", "-p", "no:cacheprovider"]
+
+    assert pytest_command(PY, Options(detail=True)) == detailed + COVERAGE
+    assert pytest_command(PY, Options(detail=True, fast=True)) == detailed
+    assert pytest_command(PY, Options(detail=True, paths=("tests/unit",))) == (
+        detailed + COVERAGE + ["tests/unit"]
+    )
+
+
+def test_el_argumento_detalle_activa_el_modo_detallado():
+    assert parse_args(["--detalle"]) == Options(detail=True)
+    assert parse_args(["--detalle", "--rapido"]) == Options(detail=True, fast=True)
+
+
+def test_lee_el_resumen_de_pytest_con_todo_superado():
+    summary = parse_test_summary("....\n306 passed in 2.10s\n")
+
+    assert summary == PytestSummary(passed=306, failed=0, errors=0, skipped=0, seconds=2.10)
+
+
+def test_lee_el_resumen_de_pytest_con_fallos_errores_y_omitidas():
+    output = (
+        "FAILED tests/x.py::t - assert 1 == 2\n2 failed, 289 passed, 3 skipped, 1 error in 1.9s\n"
+    )
+
+    summary = parse_test_summary(output)
+
+    assert summary == PytestSummary(passed=289, failed=2, errors=1, skipped=3, seconds=1.9)
+
+
+def test_el_resumen_se_lee_aunque_pytest_lo_rodee_de_signos_igual():
+    summary = parse_test_summary("=========== 5 passed, 1 warning in 0.5s ===========\n")
+
+    assert summary == PytestSummary(passed=5, failed=0, errors=0, skipped=0, seconds=0.5)
+
+
+def test_si_no_hay_resumen_de_pytest_no_se_inventa_uno():
+    assert parse_test_summary("ERROR: file or directory not found: tests/x\n") is None
+    assert parse_test_summary("") is None
+
+
+def test_cada_paso_se_anuncia_con_su_numero_sobre_el_total():
+    _, _, out, _ = verify(Options(lint=True))
+
+    assert f"{TAG} Paso 1 de 3: pruebas" in out
+    assert f"{TAG} Paso 2 de 3: cobertura" in out
+    assert f"{TAG} Paso 3 de 3: estilo" in out
+
+
+def test_sin_estilo_son_dos_pasos_y_en_modo_rapido_solo_uno():
+    _, _, out, _ = verify()
+    assert f"{TAG} Paso 2 de 2: cobertura" in out
+    assert not any("estilo" in line for line in out if line.startswith(f"{TAG} Paso"))
+
+    _, _, quick, _ = verify(Options(fast=True))
+    assert f"{TAG} Paso 1 de 1: pruebas" in quick
+    assert not any("cobertura" in line for line in quick if line.startswith(f"{TAG} Paso"))
+
+
+def test_antes_de_las_pruebas_se_explica_que_significa_cada_signo():
+    _, _, out, _ = verify()
+
+    legend = next(line for line in out if line.startswith(f"{TAG} Leyenda"))
+    assert ". superada" in legend
+    assert "F fallida" in legend
+    assert "%" in legend
+    assert out.index(legend) < out.index("291 passed in 1.2s")  # va antes de la salida de pytest
+
+
+def test_en_modo_detallado_la_leyenda_dice_que_cada_linea_es_una_prueba():
+    _, _, out, _ = verify(Options(detail=True))
+
+    legend = next(line for line in out if line.startswith(f"{TAG} Leyenda"))
+    assert "cada línea es una prueba" in legend
+    assert "F fallida" not in legend
+
+
+def test_tras_las_pruebas_un_resumen_propio_dice_cuantas_pasan_y_cuanto_tardan():
+    _, _, out, _ = verify()
+
+    expected = f"{TAG} Pruebas: 291 superadas, 0 fallidas, 0 con error, 0 omitidas, en 1.2 s"
+    assert expected in out
+    assert out.index("291 passed in 1.2s") < out.index(expected)
+
+
+def test_el_resumen_propio_cuenta_las_pruebas_fallidas():
+    runner = FakeRunner(tests=(1, "2 failed, 289 passed in 1.9s\n"))
+
+    _, _, out, _ = verify(runner=runner)
+
+    assert f"{TAG} Pruebas: 289 superadas, 2 fallidas, 0 con error, 0 omitidas, en 1.9 s" in out
+
+
+def test_si_no_se_puede_leer_el_resumen_de_pytest_lo_dice():
+    _, _, out, _ = verify(runner=FakeRunner(tests=(1, "salida rara\n")))
+
+    assert f"{TAG} Pruebas: no se pudo leer el resumen de pytest" in out
+
+
+def test_antes_de_las_tablas_de_cobertura_se_explican_sus_columnas():
+    _, _, out, _ = verify()
+
+    legend = next(line for line in out if line.startswith(f"{TAG} Columnas"))
+    for column in ("Stmts", "Miss", "Branch", "BrPart", "Cover", "Missing"):
+        assert column in legend
+    assert out.index(legend) < out.index(f"{TAG} Cobertura del proyecto:")
+
+
+def test_tras_cada_tabla_de_cobertura_un_resultado_con_su_minimo():
+    _, _, out, _ = verify()
+
+    assert f"{TAG} Resultado del proyecto: 95.00% (mínimo 80%)" in out
+    assert f"{TAG} Resultado del núcleo: 98.00% (mínimo 90%)" in out
+
+
+def test_en_una_ejecucion_parcial_el_resultado_dice_que_no_se_juzga():
+    _, _, out, _ = verify(Options(paths=("tests/unit",)), FakeRunner(project=11.0, core=40.0))
+
+    assert f"{TAG} Resultado del proyecto: 11.00% (no se juzga: ejecución parcial)" in out
+    assert f"{TAG} Resultado del núcleo: 40.00% (no se juzga: ejecución parcial)" in out
+
+
+def test_el_estilo_termina_con_su_propio_resultado():
+    _, _, ok, _ = verify(Options(lint=True))
+    assert f"{TAG} Estilo: sin errores" in ok
+
+    _, _, bad, _ = verify(Options(lint=True), FakeRunner(lint=(1, "E501\n")))
+    assert f"{TAG} Estilo: hay errores" in bad
