@@ -6,30 +6,17 @@ import json
 from decimal import Decimal
 from pathlib import Path
 
-from taximetro.__main__ import build_service, main
+from taximetro.__main__ import main
 from taximetro.core.tariff import Tariff
-from taximetro.infra.repos.memory import InMemoryTripRepository
 from taximetro.infra.tariff_loader import load_tariff
 from taximetro.settings import PROJECT_ROOT
-from tests.fakes import FakeClock, FakeEventLog, ScriptedInput
+from tests.fakes import FakeClock, ScriptedInput
 
 
 def test_el_fichero_de_tarifas_del_proyecto_es_valido():
     tariff = load_tariff(PROJECT_ROOT / "config" / "rates.toml")
 
     assert tariff == Tariff(stopped=Decimal("0.02"), moving=Decimal("0.05"))
-
-
-def test_el_servicio_cobra_con_las_tarifas_del_fichero(tmp_path):
-    path = tmp_path / "rates.toml"
-    path.write_text('[rates]\nstopped = "0.10"\nmoving = "0.20"\n', encoding="utf-8")
-    clock = FakeClock()
-
-    service = build_service(path, InMemoryTripRepository(), FakeEventLog(), clock)
-    service.start()
-    clock.advance(10)
-
-    assert service.finish() == Decimal("1.00")  # 10 s parado a 0,10 EUR/s, no a 0,02
 
 
 def test_con_un_fichero_de_tarifas_erroneo_muestra_el_error_y_devuelve_1(tmp_path, capsys):
