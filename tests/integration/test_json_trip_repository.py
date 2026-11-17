@@ -224,3 +224,38 @@ def test_el_mensaje_de_una_carpeta_de_datos_que_es_un_fichero_nombra_el_fichero_
 
     expected = f"La carpeta de datos '{no_es_carpeta}' no es una carpeta: es un fichero."
     assert str(info.value) == expected
+
+
+# check(): el mismo diagnóstico que al listar, pero sin pedir un día
+@pytest.mark.parametrize("content", FILE_LEVEL_DAMAGE + RECORD_LEVEL_DAMAGE)
+def test_comprobar_un_historial_danado_da_un_error_que_nombra_el_fichero(path, content):
+    path.write_text(content, encoding="utf-8")
+
+    with pytest.raises(TripHistoryError) as info:
+        JsonTripRepository(path).check()
+
+    assert "historial.json" in str(info.value)
+    assert path.read_text(encoding="utf-8") == content  # no se toca
+
+
+def test_comprobar_un_historial_ilegible_da_un_error_que_nombra_el_fichero(path):
+    path.mkdir()
+
+    with pytest.raises(TripHistoryError, match="No se pudo leer el historial"):
+        JsonTripRepository(path).check()
+
+
+def test_comprobar_cuando_la_carpeta_de_datos_es_un_fichero_da_un_error_que_lo_nombra(tmp_path):
+    no_es_carpeta = tmp_path / "no-soy-carpeta"
+    no_es_carpeta.write_text("esto es un fichero", encoding="utf-8")
+
+    with pytest.raises(TripHistoryError, match="no es una carpeta"):
+        JsonTripRepository(no_es_carpeta / "historial.json").check()
+
+
+def test_comprobar_sin_fichero_no_falla_ni_crea_nada(tmp_path):
+    path = tmp_path / "data" / "historial.json"
+
+    JsonTripRepository(path).check()
+
+    assert not path.parent.exists()

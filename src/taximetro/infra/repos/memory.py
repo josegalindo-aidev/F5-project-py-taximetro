@@ -21,3 +21,6 @@ class InMemoryTripRepository:
     def list_finished(self, day: date) -> list[Trip]:
         of_day = [trip for trip in self._trips if trip.finished_at.date() == day]
         return sorted(of_day, key=lambda trip: trip.finished_at)
+
+    def check(self) -> None:
+        raise NotImplementedError

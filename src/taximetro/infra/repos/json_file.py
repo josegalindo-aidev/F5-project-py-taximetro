@@ -37,6 +37,9 @@ class JsonTripRepository:
         of_day = [trip for trip in trips if trip.finished_at.date() == day]
         return sorted(of_day, key=lambda trip: trip.finished_at)
 
+    def check(self) -> None:
+        raise NotImplementedError
+
     def _read(self) -> list[dict]:
         self._check_folder()
         if not self._path.exists():

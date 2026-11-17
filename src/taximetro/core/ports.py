@@ -31,6 +31,10 @@ class TripRepository(Protocol):
         """Carreras terminadas en `day`, de la más antigua a la más reciente."""
         ...
 
+    def check(self) -> None:
+        """Comprueba que el historial se puede usar; si no, lanza `TripHistoryError`."""
+        ...
+
 
 class EventLog(Protocol):
     def record(self, at: datetime, event: str, **data: str) -> None:
