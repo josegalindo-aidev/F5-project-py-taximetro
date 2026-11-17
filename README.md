@@ -79,6 +79,12 @@ Todas las pruebas:
 python -m pytest
 ```
 
+Todo de una vez (pruebas, cobertura y estilo), con un veredicto final `VERDE` o `ROJO`:
+
+```bash
+python scripts/verificar.py --lint
+```
+
 Solo las **pruebas de aceptación** (cada historia de usuario, de principio a fin):
 
 ```bash
@@ -107,11 +113,14 @@ Las pruebas se ejecutan siempre con `pytest`. Un fichero de tests no es un progr
 
 ```
 src/taximetro/
-├── core/      Reglas de negocio puras: Tariff, Trip, TripService, errores y puertos
+├── core/      Reglas de negocio puras: Tariff, Trip, TripService, DayReport, errores y puertos
 ├── ui/cli/    Interfaz de línea de comandos
 ├── infra/     Adaptadores externos: carga de tarifas y repositorios de carreras (memoria y JSON)
-└── __main__.py  Punto de arranque
-tests/         Pruebas unitarias, de integración, de aceptación y de convenciones
+├── settings.py   Ajustes: rutas de las tarifas, los datos y los logs
+├── bootstrap.py  Monta la aplicación a partir de los ajustes
+└── __main__.py   Punto de arranque
+tests/         Pruebas unitarias, de integración, de aceptación, de arquitectura y de convenciones
+scripts/       Script de verificación (python scripts/verificar.py)
 docs/          Documentación y backlog
 config/        Tarifas (rates.toml)
 data/          Historial de carreras (trips.json); se crea al guardar la primera y Git lo ignora
