@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 
 from taximetro.core.day_report import DayReport
 from taximetro.core.ports import Clock, WallClock
@@ -13,6 +14,11 @@ from taximetro.infra.event_log import FileEventLog
 from taximetro.infra.repos.json_file import JsonTripRepository
 from taximetro.infra.tariff_loader import load_tariff
 from taximetro.settings import Settings
+
+
+def local_now() -> datetime:
+    """Fecha y hora actuales en la zona horaria del ordenador."""
+    return datetime.now().astimezone()
 
 
 @dataclass(frozen=True)

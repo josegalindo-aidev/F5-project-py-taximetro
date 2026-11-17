@@ -4,7 +4,7 @@
 
 import re
 
-from taximetro.__main__ import local_now
+from taximetro.bootstrap import local_now
 from tests.acceptance.helpers import run_program, write_rates
 
 TWO_TRIPS = [
