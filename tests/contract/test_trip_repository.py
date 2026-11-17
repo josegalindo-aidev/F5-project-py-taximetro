@@ -126,3 +126,16 @@ def test_no_se_guarda_una_carrera_sin_fechas(repository, tariff, started_at, fin
 
     with pytest.raises(InvalidTripRecord, match="sin fechas"):
         repository.save(trip)
+
+
+def test_comprobar_un_historial_vacio_no_falla(repository):
+    repository.check()
+
+
+def test_comprobar_un_historial_con_carreras_no_falla_ni_lo_cambia(repository):
+    trip = finished_trip("a", datetime(2026, 11, 11, 10, 5, tzinfo=UTC))
+    repository.save(trip)
+
+    repository.check()
+
+    assert [t.id for t in repository.list_finished(date(2026, 11, 11))] == ["a"]
