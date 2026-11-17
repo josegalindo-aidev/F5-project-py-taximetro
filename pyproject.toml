@@ -27,6 +27,7 @@ addopts = "-ra --strict-markers"
 [tool.coverage.run]
 source = ["src/taximetro/core"]
 branch = true
+patch = ["subprocess"]
 
 [tool.coverage.report]
 fail_under = 90
