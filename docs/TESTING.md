@@ -31,11 +31,13 @@ El ciclo es **rojo, verde, refactor**, con **un solo test cada vez**:
 
 | Nivel | Carpeta | Qué prueba |
 |---|---|---|
-| Unitarias del núcleo | `tests/unit/core/` | `Tariff`, `Trip` y `TripService`, aislados y sin entrada/salida, con repositorios simulados |
+| Unitarias del núcleo | `tests/unit/core/` | `Tariff`, `Trip`, `TripService` y `DayReport`, aislados y sin entrada/salida, con repositorios simulados |
 | Unitarias de la CLI | `tests/unit/ui/` | `Cli` y `format_euros`, con una consola simulada |
-| Integración | `tests/integration/` | La infraestructura y el arranque, con ficheros temporales: cargador de tarifas, registro de eventos (`test_logging.py`), comportamiento propio del repositorio JSON (fichero dañado, escritura atómica) y `main` |
-| **Aceptación** | `tests/acceptance/` | Cada historia de usuario **de principio a fin** por la consola, con el nombre `test_usNN_…`. Las de la Fase 2 arrancan `main` entero sobre una carpeta de datos temporal (`test_fase2_historial.py`, `test_us05_historico.py`, `test_us06_logs.py`), con las utilidades comunes en `tests/acceptance/helpers.py` |
+| Unitarias de los ajustes y del script | `tests/unit/test_settings.py` y `tests/unit/test_verificar.py` | `Settings` (valor explícito, variable de entorno y valor por defecto) y la lógica de `scripts/verificar.py` |
+| Integración | `tests/integration/` | La infraestructura y el arranque, con ficheros temporales: cargador de tarifas, registro de eventos (`test_logging.py`), comportamiento propio del repositorio JSON (fichero dañado, escritura atómica), el montaje de la aplicación (`test_bootstrap.py`) y `main` |
+| **Aceptación** | `tests/acceptance/` | Cada historia de usuario **de principio a fin** por la consola, con el nombre `test_usNN_…`. Las de la Fase 2 arrancan `main` entero sobre una carpeta de datos temporal (`test_fase2_historial.py`, `test_us05_historico.py`, `test_us06_logs.py`), con las utilidades comunes en `tests/acceptance/helpers.py`. `test_arranque_real.py` lanza `python -m taximetro` **en un proceso aparte**, como lo haría una persona, con datos y logs en una carpeta temporal |
 | Contrato | `tests/contract/` | Reglas que debe cumplir **cualquier implementación** de un puerto: el repositorio en memoria y el JSON pasan la misma batería (apartado 5) |
+| Arquitectura | `tests/test_architecture.py` | La regla de dependencias entre capas: lee los imports de cada fichero y falla si `core/` importa de otra capa o si `ui/` e `infra/` importan algo que no sea `core/` |
 | Convenciones | `tests/test_conventions.py` | Reglas del repositorio, como la cabecera de los `.py` |
 | Calidad | `tests/test_quality_gates.py` | Umbrales de calidad: la cobertura mínima del núcleo, configurada en `pyproject.toml` |
 
@@ -99,7 +101,7 @@ Cobertura de todo el proyecto y estilo:
 python -m pytest --cov=src/taximetro --cov-report=term-missing
 ```
 
-La cobertura se configura en `[tool.coverage]` de `pyproject.toml`: se mide `src/taximetro/core`, se cuentan también las **ramas** (un `if` cuyo camino «no» nunca se ejecuta cuenta como sin cubrir) y el mínimo es `fail_under = 90`. `tests/test_quality_gates.py` falla si alguien baja el umbral, quita las ramas o cambia lo que se mide.
+La cobertura se configura en `[tool.coverage]` de `pyproject.toml`: se mide `src/taximetro/core`, se cuentan también las **ramas** (un `if` cuyo camino «no» nunca se ejecuta cuenta como sin cubrir) y el mínimo es `fail_under = 90`. También se activa la cobertura de **subprocesos** (`patch = ["subprocess"]`), para que cuente la prueba que arranca `python -m taximetro` en un proceso aparte. `tests/test_quality_gates.py` falla si alguien baja el umbral, quita las ramas o los subprocesos, o cambia lo que se mide.
 
 Ejecutar `--cov` con **un solo fichero de tests** dará una cobertura baja y fallará: es lo esperado, porque el umbral se refiere a la suite completa.
 
@@ -222,7 +224,7 @@ Un script de mutación fiable cumple estas reglas:
 3. **El resultado se cuenta, no se estima**: el propio script imprime «N de M detectados» y los supervivientes.
 4. **Se ejecuta con `-x`** (parar en el primer fallo): basta un test en rojo para dar el mutante por detectado.
 
-Al cerrar TK-04 se probaron 26 mutantes sobre el repositorio JSON, el arranque, `TripService`, la CLI y la validación común, y los 26 fueron detectados. Es una comprobación de las decisiones que más importan, no una cobertura exhaustiva. Después, con el histórico del día y los logs de operación, se repitió con 41 mutantes más: 39 se detectaron a la primera, y los dos supervivientes llevaron a eliminar código muerto y a cubrir un hueco de pruebas (la escritura dentro de la carpeta de logs). Con los mensajes de error claros se repitió con 14 mutantes más: 13 se detectaron y el superviviente enseñó la lección de la tabla anterior sobre comparar el texto exacto.
+Al cerrar TK-04 se probaron 26 mutantes sobre el repositorio JSON, el arranque, `TripService`, la CLI y la validación común, y los 26 fueron detectados. Es una comprobación de las decisiones que más importan, no una cobertura exhaustiva. Después, con el histórico del día y los logs de operación, se repitió con 41 mutantes más: 39 se detectaron a la primera, y los dos supervivientes llevaron a eliminar código muerto y a cubrir un hueco de pruebas (la escritura dentro de la carpeta de logs). Con los mensajes de error claros se repitió con 14 mutantes más: 13 se detectaron y el superviviente enseñó la lección de la tabla anterior sobre comparar el texto exacto. Al cerrar TK-05 se repitió sobre las piezas nuevas (`Settings`, `DayReport`, `TripStatus`, `check()`, `bootstrap` y `main`): 35 mutantes y los 35 se detectaron.
 
 ## 7. Convenciones de los tests
 
