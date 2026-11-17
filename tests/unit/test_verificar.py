@@ -5,6 +5,7 @@
 import pytest
 
 from scripts.verificar import (
+    TAG,
     Options,
     coverage_failures,
     parse_args,
@@ -134,7 +135,7 @@ def test_todo_en_orden_termina_en_verde_con_codigo_0():
     code, _, out, _ = verify()
 
     assert code == 0
-    assert out[-1].startswith("VERDE")
+    assert out[-1].startswith(f"{TAG} VERDE")
 
 
 def test_muestra_la_salida_de_las_pruebas_y_los_informes():
@@ -145,11 +146,32 @@ def test_muestra_la_salida_de_las_pruebas_y_los_informes():
     assert "98.00%" in text
 
 
+def test_las_lineas_del_script_llevan_la_marca_y_la_salida_de_pytest_no():
+    _, _, out, _ = verify(Options(paths=("tests/unit",)))
+
+    assert "291 passed in 1.2s" in out  # tal cual, sin marca
+    assert f"{TAG} Cobertura del proyecto:" in out
+    assert f"{TAG} Cobertura del núcleo:" in out
+    assert any(line.startswith(f"{TAG} AVISO") for line in out)
+
+
+def test_la_marca_es_verifica_entre_corchetes():
+    _, _, out, _ = verify()
+
+    assert out[-1] == "[Verifica] VERDE: todo en orden"
+
+
+def test_un_fallo_de_cobertura_lleva_la_marca():
+    _, _, out, _ = verify(runner=FakeRunner(project=70.0))
+
+    assert any(line.startswith(f"{TAG} FALLO") and "proyecto" in line for line in out)
+
+
 def test_con_pruebas_en_rojo_termina_en_rojo_con_codigo_1():
     code, _, out, _ = verify(runner=FakeRunner(tests=(1, "2 failed, 289 passed\n")))
 
     assert code == 1
-    assert out[-1].startswith("ROJO")
+    assert out[-1].startswith(f"{TAG} ROJO")
     assert "pruebas" in out[-1]
 
 
@@ -157,7 +179,7 @@ def test_con_cobertura_baja_termina_en_rojo_y_dice_cual():
     code, text, out, _ = verify(runner=FakeRunner(core=85.0))
 
     assert code == 1
-    assert out[-1].startswith("ROJO")
+    assert out[-1].startswith(f"{TAG} ROJO")
     assert "núcleo" in text
 
 
@@ -166,7 +188,7 @@ def test_en_modo_rapido_solo_lanza_las_pruebas():
 
     assert code == 0
     assert runner.commands == [pytest_command(PY, Options(fast=True))]
-    assert out[-1].startswith("VERDE")
+    assert out[-1].startswith(f"{TAG} VERDE")
 
 
 def test_una_ejecucion_parcial_avisa_y_no_juzga_la_cobertura():
@@ -174,14 +196,14 @@ def test_una_ejecucion_parcial_avisa_y_no_juzga_la_cobertura():
 
     assert code == 0
     assert "parcial" in text
-    assert out[-1].startswith("VERDE")
+    assert out[-1].startswith(f"{TAG} VERDE")
 
 
 def test_una_ejecucion_parcial_con_pruebas_en_rojo_sigue_siendo_rojo():
     code, _, out, _ = verify(Options(paths=("tests/unit",)), FakeRunner(tests=(1, "1 failed\n")))
 
     assert code == 1
-    assert out[-1].startswith("ROJO")
+    assert out[-1].startswith(f"{TAG} ROJO")
 
 
 def test_con_lint_lanza_ruff_y_si_falla_es_rojo():
