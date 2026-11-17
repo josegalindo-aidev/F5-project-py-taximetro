@@ -104,12 +104,12 @@ class Cli:
         self._print(f"Estado: {STATE_LABEL[state]}.")
 
     def _status(self) -> None:
-        trip = self._service.active
-        if trip is None or trip.state is None:
+        status = self._service.status()
+        if status is None:
             self._print(ERRORS[TripNotStarted])
             return
-        amount = format_euros(self._service.current_amount())
-        self._print(f"Estado: {STATE_LABEL[trip.state]} - Importe actual: {amount}")
+        amount = format_euros(status.amount)
+        self._print(f"Estado: {STATE_LABEL[status.state]} - Importe actual: {amount}")
 
     def _finish(self) -> None:
         try:
@@ -141,6 +141,6 @@ class Cli:
         self._print(f"Total del día: {summary.count} {word}, {format_euros(summary.total)}")
 
     def _goodbye(self) -> None:
-        if self._service.active is not None:
+        if self._service.status() is not None:
             self._print("Aviso: La carrera en curso no se ha cobrado.")
         self._print("Hasta pronto.")
