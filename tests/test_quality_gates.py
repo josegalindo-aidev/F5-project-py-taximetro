@@ -29,3 +29,8 @@ def test_la_cobertura_cuenta_tambien_las_ramas():
 
 def test_la_cobertura_minima_del_nucleo_es_al_menos_el_90_por_ciento():
     assert coverage_config().get("report", {}).get("fail_under", 0) >= MINIMUM
+
+
+def test_la_cobertura_incluye_los_procesos_que_lanzan_las_pruebas():
+    # Sin esto, la prueba que arranca `python -m taximetro` en un proceso aparte no cuenta.
+    assert "subprocess" in coverage_config().get("run", {}).get("patch", [])
