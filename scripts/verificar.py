@@ -26,6 +26,7 @@ class Options:
     fast: bool = False
     lint: bool = False
     paths: tuple[str, ...] = ()
+    detail: bool = False
 
     @property
     def partial(self) -> bool:
@@ -38,6 +39,19 @@ def pytest_command(python: str, options: Options) -> list[str]:
     if not options.fast:
         command += ["--cov=src/taximetro", "--cov-branch", "--cov-report="]
     return command + list(options.paths)
+
+
+@dataclass(frozen=True)
+class PytestSummary:
+    passed: int
+    failed: int
+    errors: int
+    skipped: int
+    seconds: float
+
+
+def parse_test_summary(output: str) -> PytestSummary | None:
+    raise NotImplementedError
 
 
 def parse_total_percent(report: str) -> float:
