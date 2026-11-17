@@ -27,6 +27,14 @@ class JsonTripRepository:
         self._write(records)
 
     def list_finished(self, day: date) -> list[Trip]:
+        of_day = [trip for trip in self._load() if trip.finished_at.date() == day]
+        return sorted(of_day, key=lambda trip: trip.finished_at)
+
+    def check(self) -> None:
+        self._load()
+
+    def _load(self) -> list[Trip]:
+        """Todas las carreras del historial; si alguna no se puede interpretar, lo dice."""
         trips = []
         for number, record in enumerate(self._read(), start=1):
             try:
@@ -34,11 +42,7 @@ class JsonTripRepository:
             except (KeyError, TypeError, ValueError, ArithmeticError) as error:
                 detail = f"la carrera n.º {number} tiene un dato que falta o no es válido"
                 raise self._damaged(detail) from error
-        of_day = [trip for trip in trips if trip.finished_at.date() == day]
-        return sorted(of_day, key=lambda trip: trip.finished_at)
-
-    def check(self) -> None:
-        raise NotImplementedError
+        return trips
 
     def _read(self) -> list[dict]:
         self._check_folder()

@@ -23,4 +23,4 @@ class InMemoryTripRepository:
         return sorted(of_day, key=lambda trip: trip.finished_at)
 
     def check(self) -> None:
-        raise NotImplementedError
+        """En memoria no hay nada que pueda estar dañado."""
