@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+TAG = "[Verifica]"  # marca las líneas del script y las separa de la salida de pytest
 MIN_PROJECT = 80.0
 MIN_CORE = 90.0
 
@@ -78,22 +79,24 @@ def run(
 ) -> int:
     reasons = []
 
+    def say(text: str) -> None:
+        output(f"{TAG} {text}")
+
     tests_code, tests_output = runner(pytest_command(python, options))
     output(tests_output.rstrip())
     if tests_code != 0:
         reasons.append("hay pruebas en rojo")
 
     if not options.fast:
-        project = _coverage(runner, python, output, "Cobertura del proyecto")
-        core = _coverage(
-            runner, python, output, "Cobertura del núcleo", "--include=src/taximetro/core/*"
-        )
+        project = _coverage(runner, python, output, f"{TAG} Cobertura del proyecto")
+        include = "--include=src/taximetro/core/*"
+        core = _coverage(runner, python, output, f"{TAG} Cobertura del núcleo", include)
         if options.partial:
-            output("AVISO: ejecución parcial, la cobertura no es representativa y no se juzga.")
+            say("AVISO: ejecución parcial, la cobertura no es representativa y no se juzga.")
         else:
             failures = coverage_failures(project, core)
             for failure in failures:
-                output(f"FALLO: {failure}")
+                say(f"FALLO: {failure}")
             reasons += failures
 
     if options.lint:
@@ -103,9 +106,9 @@ def run(
             reasons.append("el estilo tiene errores")
 
     if reasons:
-        output("ROJO: " + "; ".join(reasons))
+        say("ROJO: " + "; ".join(reasons))
         return 1
-    output("VERDE: todo en orden")
+    say("VERDE: todo en orden")
     return 0
 
 
