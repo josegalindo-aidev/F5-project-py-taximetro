@@ -533,3 +533,7 @@ def test_pyproject_define_el_equipo_que_firma_la_portada():
     project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
 
     assert team_name(project) == "Jose Galindo"
+
+
+def test_el_papel_es_a4():
+    assert "--variable=papersize:a4" in pandoc_command("a.md", "a.pdf")
