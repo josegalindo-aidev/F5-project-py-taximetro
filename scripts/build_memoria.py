@@ -24,6 +24,8 @@ DOCUMENTS = (
     "USAGE.md",
     "CONTRIBUTING.md",
 )
+# Documentos de docs/ que se dejan fuera de la memoria a propósito.
+EXCLUDED = ("TOOLS.md",)
 TITLE = "Memoria técnica del taxímetro digital (TTX-247)"
 
 _HEADER_COMMENT = re.compile(r"\A\s*<!--.*?-->\s*", re.DOTALL)

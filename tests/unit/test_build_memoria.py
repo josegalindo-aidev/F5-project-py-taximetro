@@ -5,6 +5,9 @@
 from pathlib import Path
 
 from scripts.build_memoria import (
+    DOCUMENTS,
+    EXCLUDED,
+    ROOT,
     assemble,
     build,
     clean_document,
@@ -244,3 +247,15 @@ def test_por_defecto_la_salida_va_a_build_memoria():
 
 def test_la_carpeta_de_salida_se_puede_elegir():
     assert parse_args(["--salida", "otra/carpeta"]) == Path("otra/carpeta")
+
+
+def test_tools_no_forma_parte_de_la_memoria():
+    assert "TOOLS.md" in EXCLUDED
+    assert "TOOLS.md" not in DOCUMENTS
+
+
+def test_cada_documento_de_docs_se_incluye_o_se_excluye_a_proposito():
+    docs = {path.name for path in (ROOT / "docs").glob("*.md")}
+
+    assert docs <= set(DOCUMENTS) | set(EXCLUDED), "documento sin decidir si va en la memoria"
+    assert set(DOCUMENTS) <= docs, "la memoria incluye un documento que no existe"
