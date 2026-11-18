@@ -72,6 +72,15 @@ def extract_diagrams(text: str) -> tuple[str, list[str]]:
     return _MERMAID_BLOCK.sub(replace, text), sources
 
 
+# Opciones de Chrome para mmdc: la CI no permite el sandbox, y el texto son documentos propios.
+CHROME_CONFIG = '{"args": ["--no-sandbox"]}'
+
+
+def mermaid_command(source: str, target: str, chrome_config: str) -> list[str]:
+    """Orden de mmdc que convierte un diagrama Mermaid en un PDF."""
+    return ["mmdc", "-i", source, "-o", target, "-p", chrome_config, "--quiet"]
+
+
 def assemble(texts: dict[str, str], version: str) -> str:
     """Une los documentos de la memoria, en orden y con portada, en un solo Markdown."""
     anchors = {name: name.removesuffix(".md").lower() for name in DOCUMENTS}
