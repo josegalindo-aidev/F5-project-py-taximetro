@@ -121,7 +121,7 @@ src/taximetro/
 ├── bootstrap.py  Monta la aplicación a partir de los ajustes
 └── __main__.py   Punto de arranque
 tests/         Pruebas unitarias, de integración, de aceptación, de arquitectura y de convenciones
-scripts/       Script de verificación (python scripts/verificar.py)
+scripts/       Verificación (python scripts/verificar.py) y memoria técnica (python scripts/build_memoria.py)
 docs/          Documentación y backlog
 config/        Tarifas (rates.toml)
 data/          Historial de carreras (trips.json); se crea al guardar la primera y Git lo ignora
@@ -140,6 +140,8 @@ logs/          Logs de operación, un fichero por día; se crea al arrancar y Gi
 | [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | Flujo de trabajo: ramas, PR, commits y releases |
 | [docs/TOOLS.md](docs/TOOLS.md) | Herramientas adicionales: el tablero, el generador de la memoria técnica y `verificar.py` |
 | [docs/project_backlog.xlsx](docs/project_backlog.xlsx) | Backlog con historias de usuario, fases y avance |
+
+La **memoria técnica en PDF** reúne la arquitectura, el diseño, las decisiones, las pruebas, el manual y la guía de trabajo. La genera GitHub Actions en las PR que cambian `docs/`; en local, `python scripts/build_memoria.py` deja el Markdown ensamblado en `build/memoria/`. Cómo y por qué: [D33](docs/DECISIONS.md#d33) y [docs/TOOLS.md](docs/TOOLS.md).
 
 ## Dependencias y justificación
 
