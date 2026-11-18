@@ -7,7 +7,7 @@ fuente: docs/DECISIONS.md
 
 Todas las decisiones de diseño del proyecto, con su motivo y dónde se ven. Es el **único sitio donde se redactan**: el resto de los documentos las citan por su identificador con un enlace, por ejemplo [D25](DECISIONS.md#d25).
 
-La arquitectura que resulta de ellas está en [ARCHITECTURE.md](ARCHITECTURE.md).
+La arquitectura que resulta de ellas está en [ARCHITECTURE.md](ARCHITECTURE.md) y el diseño de las clases, explicado paso a paso, en [DESIGN.md](DESIGN.md).
 
 ## Cómo se mantiene
 
