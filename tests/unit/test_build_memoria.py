@@ -2,7 +2,7 @@
 # fuente: tests/unit/test_build_memoria.py
 """Script de la memoria técnica: cómo se prepara cada documento antes de ensamblarlo."""
 
-from scripts.build_memoria import clean_document, convert_anchors, rewrite_links
+from scripts.build_memoria import assemble, clean_document, convert_anchors, rewrite_links
 
 HEADER = "<!--\nProyecto: py-taximetro\nfuente: docs/USAGE.md\n-->\n\n"
 
@@ -89,3 +89,57 @@ def test_el_texto_sin_anclas_no_cambia():
     text = "Texto con [enlace](#d1) y `<a>` en código."
 
     assert convert_anchors(text) == text
+
+
+DOCUMENT_NAMES = [
+    "ARCHITECTURE.md",
+    "DESIGN.md",
+    "DECISIONS.md",
+    "TESTING.md",
+    "USAGE.md",
+    "CONTRIBUTING.md",
+]
+
+
+def sample_texts() -> dict[str, str]:
+    return {name: f"{HEADER}# Documento {name}\n\nCuerpo.\n" for name in DOCUMENT_NAMES}
+
+
+def test_la_memoria_empieza_por_una_portada_con_la_version():
+    memoria = assemble(sample_texts(), "1.2.3")
+
+    assert memoria.startswith("---\n")
+    assert 'title: "Memoria técnica del taxímetro digital (TTX-247)"' in memoria
+    assert 'subtitle: "Versión 1.2.3"' in memoria
+    assert "lang: es" in memoria
+
+
+def test_incluye_los_documentos_en_el_orden_de_la_memoria():
+    memoria = assemble(sample_texts(), "1.2.3")
+
+    positions = [memoria.index(f"# Documento {name}") for name in DOCUMENT_NAMES]
+    assert positions == sorted(positions)
+
+
+def test_cada_documento_se_limpia_y_recibe_su_ancla():
+    memoria = assemble(sample_texts(), "1.2.3")
+
+    assert "Proyecto: py-taximetro" not in memoria
+    assert "# Documento DECISIONS.md {#decisions}" in memoria
+
+
+def test_convierte_los_enlaces_y_las_anclas_de_los_documentos():
+    texts = sample_texts()
+    texts["USAGE.md"] += '\nVéase [D1](DECISIONS.md#d1).\n'
+    texts["DECISIONS.md"] += '\n| <a id="d1"></a>D1 | Dominio |\n'
+
+    memoria = assemble(texts, "1.2.3")
+
+    assert "Véase [D1](#d1)." in memoria
+    assert "| []{#d1}D1 | Dominio |" in memoria
+
+
+def test_ignora_los_documentos_que_no_forman_parte_de_la_memoria():
+    texts = sample_texts() | {"OTRO.md": "# No debe salir\n"}
+
+    assert "No debe salir" not in assemble(texts, "1.2.3")
