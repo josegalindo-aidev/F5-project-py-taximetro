@@ -56,3 +56,25 @@ def assemble(texts: dict[str, str], version: str) -> str:
         for name in DOCUMENTS
     ]
     return "\n".join([cover, *chapters])
+
+
+def pdf_name(version: str) -> str:
+    """Nombre del PDF de la memoria para una versión del paquete."""
+    return f"taximetro-memoria-{version}.pdf"
+
+
+def pandoc_command(source: str, target: str) -> list[str]:
+    """Orden de Pandoc que convierte el Markdown ensamblado en el PDF."""
+    return [
+        "pandoc",
+        source,
+        "--from=markdown",
+        "--pdf-engine=xelatex",
+        "--toc",
+        "--toc-depth=3",
+        "--number-sections",
+        "--variable=colorlinks:true",
+        "--variable=geometry:margin=2.5cm",
+        "-o",
+        target,
+    ]
