@@ -67,7 +67,9 @@ def extract_diagrams(text: str) -> tuple[str, list[str]]:
     def replace(found: re.Match[str]) -> str:
         sources.append(found[1])
         number = len(sources)
-        return f"![Diagrama {number}]({DIAGRAMS_DIR}/diagrama-{number}.pdf)"
+        # Sin texto alternativo: con él Pandoc crea una figura con pie, que en los diagramas
+        # altos no cabe en la página; el título del apartado ya dice qué es.
+        return f"![]({DIAGRAMS_DIR}/diagrama-{number}.pdf)"
 
     return _MERMAID_BLOCK.sub(replace, text), sources
 

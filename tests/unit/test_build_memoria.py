@@ -293,7 +293,7 @@ def test_un_bloque_mermaid_se_sustituye_por_una_imagen_numerada():
 
     result, _ = extract_diagrams(text)
 
-    assert result == "Antes.\n\n![Diagrama 1](diagramas/diagrama-1.pdf)\n\nDespués.\n"
+    assert result == "Antes.\n\n![](diagramas/diagrama-1.pdf)\n\nDespués.\n"
 
 
 def test_devuelve_el_texto_de_cada_diagrama_sin_las_vallas():
@@ -387,8 +387,8 @@ def test_con_mmdc_el_markdown_enlaza_las_imagenes_en_lugar_de_el_codigo(tmp_path
     run_build(tmp_path, FakeRunner())
 
     memoria = (tmp_path / "out" / "memoria.md").read_text(encoding="utf-8")
-    assert "![Diagrama 1](diagramas/diagrama-1.pdf)" in memoria
-    assert "![Diagrama 2](diagramas/diagrama-2.pdf)" in memoria
+    assert "![](diagramas/diagrama-1.pdf)" in memoria
+    assert "![](diagramas/diagrama-2.pdf)" in memoria
     assert f"{FENCE}mermaid" not in memoria
 
 
@@ -444,3 +444,9 @@ def test_si_mmdc_falla_devuelve_su_codigo_y_no_lanza_pandoc(tmp_path):
 
     assert code == 4
     assert [command[0] for command in runner.commands] == ["mmdc"]
+
+
+def test_la_imagen_no_lleva_texto_alternativo_para_que_no_se_convierta_en_figura_con_pie():
+    result, _ = extract_diagrams(mermaid_block("flowchart LR\n    A --> B"))
+
+    assert result.startswith("![](")
