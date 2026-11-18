@@ -103,6 +103,7 @@ def pandoc_command(source: str, target: str) -> list[str]:
         "pandoc",
         source,
         "--from=markdown+gfm_auto_identifiers",
+        f"--resource-path={Path(source).parent}",
         "--pdf-engine=xelatex",
         "--toc",
         "--toc-depth=3",
