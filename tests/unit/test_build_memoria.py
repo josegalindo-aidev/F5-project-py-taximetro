@@ -2,7 +2,7 @@
 # fuente: tests/unit/test_build_memoria.py
 """Script de la memoria técnica: cómo se prepara cada documento antes de ensamblarlo."""
 
-from scripts.build_memoria import clean_document, rewrite_links
+from scripts.build_memoria import clean_document, convert_anchors, rewrite_links
 
 HEADER = "<!--\nProyecto: py-taximetro\nfuente: docs/USAGE.md\n-->\n\n"
 
@@ -73,3 +73,19 @@ def test_reescribe_todos_los_enlaces_de_un_mismo_texto():
     text = "[a](DECISIONS.md#d1), [b](DECISIONS.md#d2) y [c](ARCHITECTURE.md)"
 
     assert rewrite_links(text, ANCHORS) == "[a](#d1), [b](#d2) y [c](#architecture)"
+
+
+def test_un_ancla_html_se_convierte_en_ancla_de_pandoc():
+    assert convert_anchors('| <a id="d25"></a>D25 | Calidad |') == "| []{#d25}D25 | Calidad |"
+
+
+def test_convierte_todas_las_anclas_de_un_texto():
+    text = '<a id="d1"></a>D1\n<a id="d2"></a>D2\n'
+
+    assert convert_anchors(text) == "[]{#d1}D1\n[]{#d2}D2\n"
+
+
+def test_el_texto_sin_anclas_no_cambia():
+    text = "Texto con [enlace](#d1) y `<a>` en código."
+
+    assert convert_anchors(text) == text

@@ -8,6 +8,7 @@ import re
 
 _HEADER_COMMENT = re.compile(r"\A\s*<!--.*?-->\s*", re.DOTALL)
 _FIRST_TITLE = re.compile(r"^# (.+?)[ \t]*$", re.MULTILINE)
+_HTML_ANCHOR = re.compile(r'<a id="([^"]+)"></a>')
 _LINK = re.compile(r"\]\(([^)#\s]+)(#[^)\s]*)?\)")
 
 
@@ -28,3 +29,8 @@ def rewrite_links(text: str, anchors: dict[str, str]) -> str:
         return f"]({fragment or '#' + anchors[document]})"
 
     return _LINK.sub(replace, text)
+
+
+def convert_anchors(text: str) -> str:
+    """Convierte las anclas HTML en anclas de Pandoc, que el PDF sí conserva."""
+    return _HTML_ANCHOR.sub(r"[]{#\1}", text)
