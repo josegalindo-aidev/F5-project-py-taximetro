@@ -126,6 +126,7 @@ logs/          Logs de operación, un fichero por día; se crea al arrancar y Gi
 | [docs/USAGE.md](docs/USAGE.md) | Manual de uso del taxímetro |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Arquitectura, módulos y decisiones de diseño |
 | [docs/TESTING.md](docs/TESTING.md) | Cómo se prueba el proyecto: TDD, niveles de prueba, ejecución y mutaciones |
+| [docs/AUTOEVALUACION.md](docs/AUTOEVALUACION.md) | Autoevaluación frente a la rúbrica: veredicto y enlaces a la evidencia de cada criterio |
 | [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | Flujo de trabajo: ramas, PR, commits y releases |
 | [docs/project_backlog.xlsx](docs/project_backlog.xlsx) | Backlog con historias de usuario, fases y avance |
 
