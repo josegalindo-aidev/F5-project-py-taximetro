@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "taximetro"
-version = "0.3.0a2.dev0"
+version = "0.3.0a2"
 description = "Taxímetro digital (TTX-247) - prototipo de TaxiTech Solutions"
 authors = [{ name = "Jose Galindo" }]
 requires-python = ">=3.11"
