@@ -1,0 +1,71 @@
+<!--
+Proyecto: py-taximetro
+fuente: docs/DECISIONS.md
+-->
+
+# Registro de decisiones del taxímetro digital (TTX-247)
+
+Todas las decisiones de diseño del proyecto, con su motivo y dónde se ven. Es el **único sitio donde se redactan**: el resto de los documentos las citan por su identificador con un enlace, por ejemplo [D25](DECISIONS.md#d25).
+
+La arquitectura que resulta de ellas está en [ARCHITECTURE.md](ARCHITECTURE.md).
+
+## Cómo se mantiene
+
+- Cada decisión tiene un identificador (`D1`, `D2`…) que **no cambia nunca**. Las decisiones nuevas continúan la secuencia.
+- Una decisión que se sustituye **no se borra**: su estado pasa a «Sustituida por Dn» y la nueva explica el cambio.
+- **Origen** es la fase o la tarea del backlog en que se tomó. No lleva números de versión, que solo viven en `pyproject.toml` y en el [README](../README.md#versionado).
+- **Se ve en** apunta al código, a los tests o a los documentos donde se aprecia la decisión.
+- Si una decisión y el código difieren, manda el código, y se corrige este registro.
+
+## Índice por tema
+
+| Tema | Decisiones |
+|---|---|
+| Dominio | [D1](#d1), [D3](#d3), [D5](#d5), [D6](#d6) |
+| Tiempo | [D2](#d2), [D14](#d14) |
+| Diseño de clases | [D10](#d10), [D26](#d26) |
+| Interfaz | [D4](#d4) |
+| Configuración | [D7](#d7), [D18](#d18), [D27](#d27) |
+| Arranque | [D8](#d8), [D11](#d11), [D12](#d12), [D28](#d28) |
+| Persistencia | [D15](#d15), [D16](#d16), [D17](#d17), [D19](#d19) |
+| Registro de eventos | [D20](#d20), [D21](#d21), [D22](#d22) |
+| Errores | [D13](#d13), [D24](#d24) |
+| Calidad | [D23](#d23), [D25](#d25), [D29](#d29), [D31](#d31) |
+| Proyecto | [D9](#d9), [D30](#d30), [D32](#d32) |
+
+## Registro
+
+| ID | Tema | Decisión | Motivo | Origen | Se ve en | Estado |
+|---|---|---|---|---|---|---|
+| <a id="d1"></a>D1 | Dominio | **`Trip` no tiene reloj**: recibe `at` en cada operación y es el servicio quien lee el `Clock`. | El cálculo es determinista y se prueba sin esperas ni `sleep`. | Fase 1 | `core/trip.py`, `tests/unit/core/test_trip.py` | Vigente |
+| <a id="d2"></a>D2 | Tiempo | **Reloj inyectado** como dependencia (`Clock`): `time.monotonic` en producción y `FakeClock` en pruebas. | Permite simular el paso del tiempo a voluntad. `monotonic` no se ve afectado por cambios en la hora del sistema. | Fase 1 | `core/ports.py` (`Clock`), `tests/fakes.py` (`FakeClock`) | Vigente |
+| <a id="d3"></a>D3 | Dominio | **`Decimal` para el dinero**, nunca `float`. Los segundos se restan a partir de su representación textual. | Evita errores de redondeo binario. El redondeo solo se aplica al final. | Fase 1 | `core/trip.py`, `core/tariff.py` | Vigente |
+| <a id="d4"></a>D4 | Interfaz | **Entrada y salida inyectadas en `Cli`** (`input_fn`, `output_fn`). | La CLI se prueba entera con una consola simulada. | Fase 1 | `ui/cli/app.py`, `tests/unit/ui/test_cli.py` | Vigente |
+| <a id="d5"></a>D5 | Dominio | **La carrera activa vive en memoria** dentro de `TripService`; solo se guarda al terminar. | Una carrera en curso no tiene total ni fecha de fin. Guardar la carrera en curso se revisará con la API de la Fase 4. | Fase 1 | `core/trip_service.py`; limitación L3 de `ARCHITECTURE.md` | Vigente |
+| <a id="d6"></a>D6 | Dominio | **`State` en su propio módulo.** | Rompe la dependencia circular `Tariff` ↔ `Trip`. `Trip` lo reexporta para no romper importaciones. | Fase 1 | `core/state.py` | Vigente |
+| <a id="d7"></a>D7 | Configuración | **Las tarifas viven en `config/rates.toml`**, con los valores como **texto** (`"0.02"`). | Cambiar el cobro no exige tocar el código. Como texto, el valor es un `Decimal` exacto; un número sin comillas es un `float` binario con error de redondeo, y se rechaza. | US-07 | `config/rates.toml`, `infra/tariff_loader.py` | Vigente |
+| <a id="d8"></a>D8 | Arranque | **Un único punto de arranque** (`__main__`), que delega el montaje en `bootstrap`. | Una interfaz futura (GUI o API) solo necesita su propio arranque y reutiliza el mismo núcleo. | Fase 1; matizada en TK-05 | `__main__.py`, `bootstrap.py` | Vigente |
+| <a id="d9"></a>D9 | Proyecto | **Sin dependencias externas en ejecución** (`dependencies = []`). Solo la biblioteca estándar. | Mínima superficie; las extras `sql` y `api` se instalan cuando haga falta. | Fase 1 | `pyproject.toml` | Vigente |
+| <a id="d10"></a>D10 | Diseño de clases | **Solo existen puertos con más de una implementación real** (`Clock`, `TripRepository`). | Evita abstracciones sin uso. Se añade un puerto cuando aparece una segunda implementación. | Fase 1 | `core/ports.py` | Vigente |
+| <a id="d11"></a>D11 | Arranque | **Un fichero de tarifas inválido impide arrancar**; no hay tarifa por defecto. | Cobrar con una tarifa equivocada es peor que no cobrar. El error sale por `stderr` y el código de salida es 1. | US-07 | `bootstrap.py`, `tests/integration/test_main.py` | Vigente |
+| <a id="d12"></a>D12 | Arranque | **`main` devuelve el código de salida** y recibe ruta, reloj y consola inyectables. | El arranque completo se prueba sin teclado ni esperas; el bloque `if __name__ == "__main__"` lo traduce en `SystemExit`. | US-07 | `__main__.py`, `tests/acceptance/test_arranque_real.py` | Vigente |
+| <a id="d13"></a>D13 | Errores | **El cargador convierte todo fallo en `TariffFileError`** y conserva el error original (`from error`). | Quien lo llama gestiona un solo tipo de error y no pierde la información técnica. Se comprobó con una batería de entradas anómalas. | US-07 | `infra/tariff_loader.py`, `tests/integration/test_tariff_loader.py` | Vigente |
+| <a id="d14"></a>D14 | Tiempo | **Dos relojes**: `Clock` (monotónico, mide duraciones y se usa para cobrar) y `WallClock` (fecha y hora con zona, dice *cuándo*). `Trip` no lee ninguno. | El cobro no se altera si cambia la hora del sistema, y el historial puede decir cuándo ocurrió cada carrera. | TK-04 | `core/ports.py` (`WallClock`), `core/trip_service.py` | Vigente |
+| <a id="d15"></a>D15 | Persistencia | **Historial en JSON** con fechas ISO 8601 con zona e importes como texto. | Legible y editable a mano, sin dependencias externas, sin perder precisión de `Decimal`. | TK-04 | `infra/repos/json_file.py` | Vigente |
+| <a id="d16"></a>D16 | Persistencia | **Escritura atómica**: temporal junto al fichero y `os.replace`. | Un corte a mitad de escritura no destruye el historial anterior. | TK-04 | `infra/repos/json_file.py` | Vigente |
+| <a id="d17"></a>D17 | Persistencia | **Un historial dañado o ilegible impide arrancar y nunca se sobrescribe**; un fallo al guardar nunca esconde el total (`TripNotSaved`). | Perder datos es peor que no arrancar, y el taxista debe poder cobrar siempre. | TK-04 | `infra/repos/json_file.py`, `core/trip_service.py` (`TripNotSaved`) | Vigente |
+| <a id="d18"></a>D18 | Configuración | **Datos y logs en carpetas independientes**, configuradas como **directorios** (`TAXIMETRO_DATA_DIR`, `TAXIMETRO_LOG_DIR`), no como ficheros. | Se pueden montar en ubicaciones distintas en producción, y la escritura atómica necesita crear un temporal junto al fichero final. | TK-04 y US-06 | `settings.py` | Vigente |
+| <a id="d19"></a>D19 | Persistencia | **Contrato común** para los repositorios y la validación de guardado en un único sitio (`ensure_can_be_saved`). | Una implementación nueva solo se añade a la fixture parametrizada; las reglas no se duplican. | TK-04 | `infra/repos/validation.py`, `tests/contract/` | Vigente |
+| <a id="d20"></a>D20 | Registro de eventos | **El registro de eventos es un puerto propio (`EventLog`)**, con la hora del reloj de pared inyectado, y no el módulo `logging` de Python. | La marca de tiempo es determinista en las pruebas, no hay configuración global compartida y se prueba con el mismo estilo que el resto (doble de pruebas, mutación). | US-06 | `core/ports.py` (`EventLog`), `infra/event_log.py` | Vigente |
+| <a id="d21"></a>D21 | Registro de eventos | **Formato JSON Lines, un fichero por día**; nombres de evento en español y estado con el valor interno (`stopped`, `moving`). | Una línea por evento se lee y se filtra con herramientas, no se corrompe si el programa se corta, y el formato de datos no depende del idioma de la consola. | US-06 | `infra/event_log.py` | Vigente |
+| <a id="d22"></a>D22 | Registro de eventos | **Un fallo del registro nunca impide cobrar, pero una carpeta de logs inservible impide arrancar.** | Cobrar es lo primero durante la jornada; pero los logs existen para auditar, y arrancar sin poder auditar vaciaría su propósito. | US-06 | `core/trip_service.py` (`_log`), `bootstrap.py` | Vigente |
+| <a id="d23"></a>D23 | Calidad | **La cobertura del núcleo tiene un umbral del 90 %**, con ramas, configurado en `pyproject.toml`, y un test impide relajarlo. | El criterio de TK-03 se cumple hoy con un 100 %, pero solo un umbral que falla evita que baje sin que nadie lo note, y el núcleo es donde está el negocio. | TK-03 | `pyproject.toml`, `tests/test_quality_gates.py` | Vigente |
+| <a id="d24"></a>D24 | Errores | **Los mensajes de error se redactan para quien no conoce Python**: nombran la ruta y dicen dónde mirar (línea y columna, número de carrera, qué fichero estorba), sin el texto de la excepción. | Los errores salen por pantalla al arrancar, donde los lee un responsable y no un programador; para depurar queda el error original encadenado (`from error`). | Fase 2 | `infra/repos/json_file.py`, `infra/tariff_loader.py` | Vigente |
+| <a id="d25"></a>D25 | Calidad | **Las capas y su regla de dependencias se comprueban con un test** (`tests/test_architecture.py`, que lee los imports de cada fichero). | Una regla que solo está escrita se rompe sin que nadie lo note: así `core/` no puede importar de `ui/` ni de `infra/`, y estas dos solo pueden importar `core/`. | TK-05 | `tests/test_architecture.py` | Vigente |
+| <a id="d26"></a>D26 | Diseño de clases | **`TripService` opera y `DayReport` consulta.** El servicio entrega el estado de la carrera en curso ya calculado (`TripStatus`) y la interfaz no lee la entidad `Trip`. | Una interfaz nueva (GUI, API) reutiliza los dos casos de uso sin conocer el modelo interno, y cada clase tiene una sola razón para cambiar. | TK-05 | `core/trip_service.py`, `core/day_report.py` | Vigente |
+| <a id="d27"></a>D27 | Configuración | **Las rutas viven en `Settings`**: valor explícito, luego variable de entorno y luego el valor por defecto del proyecto. | Un único sitio decide de dónde salen las tarifas, los datos y los logs, y se prueba sin arrancar nada. | TK-05 | `settings.py` | Vigente |
+| <a id="d28"></a>D28 | Arranque | **`bootstrap.build_application` monta y comprueba** las piezas, y `main` solo lo llama y traduce los errores en un código de salida. El puerto `TripRepository` tiene `check()` para validar el historial al arrancar. | El montaje se prueba con ficheros temporales y sin consola, una interfaz futura lo reutiliza y ya no se lee «un día cualquiera» del historial como truco para detectar un fichero dañado. | TK-05 | `bootstrap.py`, `core/ports.py` (`check`) | Vigente |
+| <a id="d29"></a>D29 | Calidad | **El arranque real se prueba en un proceso aparte** (`python -m taximetro`) y la cobertura incluye los subprocesos (`patch = ["subprocess"]`). | Es lo que hace el usuario: comprueba que el programa arranca, que el código de salida llega al sistema y que escribe donde toca. Así el bloque `if __name__ == "__main__"` queda cubierto sin excluirlo de la medida. | TK-05 | `tests/acceptance/test_arranque_real.py`, `pyproject.toml` | Vigente |
+| <a id="d30"></a>D30 | Proyecto | **Versiones intermedias**: durante una fase la rama de release lleva `X.Y.Z.dev0` y, para mostrar el avance, se publica una pre-release `X.Y.ZaN` etiquetada sobre la rama de release, sin tocar `main`. | El código en desarrollo no se confunde con la fase anterior ni con la fase cerrada, y `main` sigue siendo el último estado entregado y demostrado. La etiqueta y el número del paquete del commit etiquetado coinciden. | Fase 3 | `pyproject.toml`, apartado «Versionado» del README, `CONTRIBUTING.md` | Vigente |
+| <a id="d31"></a>D31 | Calidad | **Script de verificación** (`scripts/verificar.py`): una orden lanza las pruebas, la cobertura y, si se pide, el estilo, y termina con un veredicto `VERDE` o `ROJO`. Sus mínimos son el 80 % para el proyecto y el 90 % para el núcleo. | Una orden en lugar de varias, la misma comprobación para todos y un resultado legible para las demos. La lógica que decide (la orden y el veredicto) se prueba; solo lanza procesos la parte final. | TK-12 | `scripts/verificar.py`, `tests/unit/test_verificar.py`, `TESTING.md` | Vigente |
+| <a id="d32"></a>D32 | Proyecto | **La instalación usa solo los extras de `pyproject.toml`** (`pip install -e ".[dev]"`); no hay `requirements.txt`. | Una sola fuente de dependencias. El fichero que existía era una salida de `pip freeze` con una dependencia por SSH que solo funcionaba en un ordenador. | TK-10 | `pyproject.toml`, README | Vigente |

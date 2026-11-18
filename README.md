@@ -133,7 +133,8 @@ logs/          Logs de operación, un fichero por día; se crea al arrancar y Gi
 | Documento | Contenido |
 |---|---|
 | [docs/USAGE.md](docs/USAGE.md) | Manual de uso del taxímetro |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Arquitectura, módulos y decisiones de diseño |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Arquitectura y módulos |
+| [docs/DECISIONS.md](docs/DECISIONS.md) | Registro de las decisiones de diseño, con su motivo |
 | [docs/TESTING.md](docs/TESTING.md) | Cómo se prueba el proyecto: TDD, niveles de prueba, ejecución y mutaciones |
 | [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | Flujo de trabajo: ramas, PR, commits y releases |
 | [docs/project_backlog.xlsx](docs/project_backlog.xlsx) | Backlog con historias de usuario, fases y avance |
