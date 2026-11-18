@@ -29,7 +29,7 @@ El taxímetro funciona por línea de comandos (Fase 1, más US-07 y TK-04 de la 
 - permite consultar las carreras de hoy o de otro día, con su hora, su importe y el total (US-05),
 - registra el inicio, los cambios de estado y el fin de cada carrera en un log de operación para auditar el uso, sin que un fallo del log impida cobrar (US-06).
 
-Este documento describe **cómo está construido** (módulos) y **qué hace** (arquitectura funcional). El **porqué** de cada decisión de diseño está en [DECISIONS.md](DECISIONS.md). Las fases 2 a 4 se recogen como evolución prevista en la sección 9.
+Este documento describe **cómo está construido** (módulos) y **qué hace** (arquitectura funcional). El diseño de las clases está en [DESIGN.md](DESIGN.md) y el **porqué** de cada decisión, en [DECISIONS.md](DECISIONS.md). Las fases 2 a 4 se recogen como evolución prevista en la sección 9.
 
 ---
 
@@ -131,37 +131,7 @@ Los bloques marcados como `planificado` (GUI, API y el repositorio SQL) aún no 
 | `day_report.py` | `DayReport`: caso de uso de **consulta**. `for_day(día)` devuelve un `DaySummary` (día, carreras, número y total) con las carreras terminadas ese día; sin día, las de hoy según el reloj de pared. Solo lee del repositorio: no opera el taxímetro (decisión [D26](DECISIONS.md#d26)). | `trip`, `ports` | ✅ |
 | `ports.py` | Contratos (`Protocol`): `Clock` (segundos monotónicos, para medir duraciones), `WallClock` (fecha y hora con zona horaria, para saber *cuándo*), `TripRepository` (`save`, `list_finished` y `check`) y `EventLog` (`record`: anota un evento con su hora). | `trip` | ✅ |
 
-**API pública de `Trip`:**
-
-| Elemento | Función |
-|---|---|
-| `start(at, when=None)` | Inicia la carrera en estado parado. `when` es la fecha y hora de pared de inicio. |
-| `change_state(state, at)` | Cierra el tramo actual y cambia de estado. |
-| `amount_at(at)` | Importe acumulado hasta `at`, sin cerrar la carrera. |
-| `finish(at, when=None)` | Cierra el último tramo y devuelve el total en `Decimal` redondeado a 2 decimales. `when` es la fecha y hora de pared de fin. |
-| `state` · `is_finished` | Consulta del estado actual y de si la carrera terminó. |
-| `stopped_seconds` · `moving_seconds` | Segundos acumulados en cada estado. |
-| `started_at` · `finished_at` | Fecha y hora de pared de inicio y fin, o `None` si no se indicaron. |
-| `Trip.restore(...)` | Reconstruye una carrera terminada a partir de datos guardados (sin tarifa: ya no se recalcula). |
-
-**API pública de `TripService`:**
-
-| Elemento | Función |
-|---|---|
-| `start()` | Crea y arranca una carrera nueva con identificador único. |
-| `set_state(state)` | Cambia el estado de la carrera activa. |
-| `status()` | Estado e importe de la carrera en curso (`TripStatus`), o `None` si no hay ninguna. |
-| `finish()` | Finaliza, guarda la carrera en el historial, devuelve el total y deja el servicio libre. Si el guardado falla, lanza `TripNotSaved` con el total. |
-| `active` | La carrera activa, o `None`. |
-
-**API pública de `DayReport`:**
-
-| Elemento | Función |
-|---|---|
-| `today()` | El día actual según el reloj de pared. |
-| `for_day(day=None)` | Resumen (`DaySummary`) de las carreras terminadas ese día, de la más antigua a la más reciente; sin día, las de hoy. Delega en `TripRepository.list_finished`. |
-
-`DaySummary` es inmutable y expone `day`, `trips`, `count` y `total`.
+La API pública de `Trip`, `TripService` y `DayReport`, y el diseño de cada clase, están en [DESIGN.md](DESIGN.md#3-diseño-clase-a-clase).
 
 ### 3.2 Interfaz de línea de comandos — `src/taximetro/ui/cli/`
 
@@ -296,34 +266,7 @@ Los datos y los logs son **dos carpetas independientes** para poder montarlas en
 
 ### 4.1 Modelo de cálculo
 
-El importe de una carrera es la suma, por tramos, del tiempo transcurrido multiplicado por la tarifa del estado vigente:
-
-```
-importe = Σ  (duración del tramo en segundos × precio por segundo del estado)
-
-parado:         0,02 €/s     (valores de config/rates.toml)
-en movimiento:  0,05 €/s
-```
-
-Un tramo termina en cada cambio de estado o al finalizar. Ejemplo (10 s parado, 10 s en movimiento, 10 s parado):
-
-```
-10 × 0,02 + 10 × 0,05 + 10 × 0,02  =  0,20 + 0,50 + 0,20  =  0,90 €
-```
-
-**Reglas de negocio implementadas:**
-
-1. Toda carrera comienza en estado parado.
-2. El cambio de estado cierra el tramo anterior con la tarifa que tenía.
-3. El total se redondea a céntimos con redondeo medio hacia arriba (`ROUND_HALF_UP`) **solo al final**.
-4. Las tarifas son números finitos y no negativos.
-5. El tiempo entre carreras no se cobra.
-6. Solo hay una carrera activa a la vez.
-7. El instante de una operación no puede ser anterior al de la última.
-8. Las tarifas se leen del fichero de configuración al arrancar y no cambian durante la ejecución.
-9. Cada carrera finalizada se guarda en el historial con su fecha de inicio y fin, los segundos en cada estado y el total.
-10. **Un fallo del historial nunca esconde el importe**: si no se puede guardar, el total se muestra igualmente con un aviso y la carrera queda cerrada.
-11. Un historial dañado o ilegible impide arrancar y **no se sobrescribe**.
+El importe de una carrera y las reglas de negocio que lo gobiernan se explican en [DESIGN.md](DESIGN.md#modelo-de-calculo), junto con el análisis del dominio.
 
 ### 4.2 Trazabilidad: historia de usuario → módulos → pruebas
 
@@ -345,58 +288,11 @@ Un tramo termina en cada cambio de estado o al finalizar. Ejemplo (10 s parado, 
 
 ### 4.3 Ciclo de vida de una carrera
 
-```mermaid
-stateDiagram-v2
-    [*] --> SinIniciar
-    SinIniciar --> Parado: start
-    Parado --> EnMovimiento: change_state MOVING
-    EnMovimiento --> Parado: change_state STOPPED
-    Parado --> Finalizada: finish
-    EnMovimiento --> Finalizada: finish
-    Finalizada --> [*]
-```
-
-Una carrera finalizada no admite más operaciones. Para iniciar otra, `TripService` crea una `Trip` nueva.
+El ciclo de vida de una carrera (sin iniciar, parado, en movimiento y finalizada) está en [DESIGN.md](DESIGN.md#ciclo-de-vida).
 
 ### 4.4 Flujo de una carrera completa
 
-```mermaid
-sequenceDiagram
-    actor U as Taxista
-    participant C as Cli
-    participant S as TripService
-    participant K as Clock
-    participant T as Trip
-    participant R as TripRepository
-    participant E as EventLog
-
-    U->>C: iniciar
-    C->>S: start
-    S->>K: lee el reloj
-    K-->>S: t0
-    S->>T: crea Trip y start en t0
-    S->>E: carrera_iniciada
-    C-->>U: Carrera iniciada
-
-    U->>C: mover
-    C->>S: set_state MOVING
-    S->>K: lee el reloj
-    K-->>S: t1
-    S->>T: change_state MOVING en t1
-    S->>E: estado_cambiado
-    Note over T: cierra el tramo parado<br/>(t1 - t0) x tarifa parado
-
-    U->>C: finalizar
-    C->>S: finish
-    S->>K: lee el reloj
-    K-->>S: t2
-    S->>T: finish en t2
-    T-->>S: total Decimal
-    S->>E: carrera_finalizada
-    S->>R: save de la carrera
-    S-->>C: total
-    C-->>U: Carrera finalizada. Total: 0,70 €
-```
+Cómo colaboran los objetos durante una carrera completa se explica, con su diagrama de secuencia, en [DESIGN.md](DESIGN.md#flujo-de-una-carrera).
 
 ### 4.5 Arranque: tarifas, historial y logs
 
@@ -475,7 +371,7 @@ El proyecto se desarrolla con **TDD**: primero el test en rojo, luego el código
 |---|---|
 | Cabecera de cada fichero `.py` | Dos líneas al principio: `# Proyecto: py-taximetro` y `# fuente: <ruta desde la raíz>` (por ejemplo, `src/taximetro/core/trip.py`). Los ficheros vacíos, como los `__init__.py`, no la llevan. La regla se comprueba en `tests/test_conventions.py`. |
 | Versión | La versión vive solo en `pyproject.toml`. El criterio de versionado y el estado de las versiones publicadas se documentan únicamente en el [README](../README.md#versionado); no se repiten en ningún otro fichero. |
-| Documentación | `README.md` (entrada del repositorio: instalación, arranque y enlaces), `docs/USAGE.md` (manual de uso), `docs/ARCHITECTURE.md` (este documento), `docs/DECISIONS.md` (registro de decisiones de diseño), `docs/TESTING.md` (cómo se prueba) y `docs/CONTRIBUTING.md` (flujo de trabajo). El README resume y enlaza; el detalle vive en `docs/`, y el README es el único documento de la raíz. Los documentos `.md` llevan el **nombre en mayúsculas** (`USAGE.md`, `ARCHITECTURE.md`…) para distinguirlos del código y de los tests, que van en minúsculas. |
+| Documentación | `README.md` (entrada del repositorio: instalación, arranque y enlaces), `docs/USAGE.md` (manual de uso), `docs/ARCHITECTURE.md` (este documento), `docs/DESIGN.md` (diseño de las clases y de la POO), `docs/DECISIONS.md` (registro de decisiones de diseño), `docs/TESTING.md` (cómo se prueba) y `docs/CONTRIBUTING.md` (flujo de trabajo). El README resume y enlaza; el detalle vive en `docs/`, y el README es el único documento de la raíz. Los documentos `.md` llevan el **nombre en mayúsculas** (`USAGE.md`, `ARCHITECTURE.md`…) para distinguirlos del código y de los tests, que van en minúsculas. |
 | Commits | Conventional Commits (`feat`, `fix`, `test`, `refactor`, `docs`, `chore`) con referencia al issue (`Refs #n`) |
 | Ramas y PR | Una rama de release por fase y una rama por funcionalidad; `main` solo avanza tras la demo. Reglas completas en [CONTRIBUTING.md](CONTRIBUTING.md). |
 | Seguimiento | Tablero GitHub Projects «TTX-247 Taxímetro» (campos Fase, Tipo, MoSCoW, Estimate y Status) y backlog en `docs/project_backlog.xlsx` |
