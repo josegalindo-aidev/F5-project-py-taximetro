@@ -345,3 +345,9 @@ def test_mmdc_no_imprime_su_registro():
 
 def test_la_configuracion_de_chrome_desactiva_el_sandbox_que_la_ci_no_permite():
     assert "--no-sandbox" in json.loads(CHROME_CONFIG)["args"]
+
+
+def test_pandoc_busca_las_imagenes_junto_al_markdown_ensamblado():
+    command = pandoc_command("salida/memoria.md", "salida/memoria.pdf")
+
+    assert f"--resource-path={Path('salida')}" in command
