@@ -52,6 +52,8 @@ La documentación del proyecto se escribe **a mano, en Markdown, en `docs/`**, y
 | Versión y nombre | `pyproject.toml` | El PDF se llama `taximetro-memoria-<versión>.pdf` |
 | Carpeta de salida | `--salida` | Por defecto `build/memoria`, que Git ignora |
 | Motor | Pandoc y XeLaTeX | Se instalan en la CI, no en el entorno de desarrollo |
+| Estructura | Clase `report` | Portada, índice y cada documento como capítulo en página nueva; los apartados conservan la numeración escrita en los documentos |
+| Fuente de código | DejaVu Sans Mono | Trae los trazos de los árboles de carpetas y de los diagramas; se instala en la CI |
 
 **Uso en local:**
 
