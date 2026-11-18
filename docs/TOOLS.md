@@ -41,7 +41,7 @@ Un proyecto de GitHub Projects del usuario del repositorio (el número 1). Es **
 
 La documentación del proyecto se escribe **a mano, en Markdown, en `docs/`**, y no se extrae del código. Este generador la reúne en un único PDF, sin duplicar nada: el PDF no se escribe, se **ensambla**.
 
-**Cómo se generó.** `scripts/build_memoria.py` solo usa la biblioteca estándar. Une los documentos en un Markdown con portada (quita la cabecera de cada uno, convierte las anclas de las decisiones y reescribe los enlaces entre documentos) y Pandoc lo convierte en PDF con XeLaTeX. Las funciones que deciden se prueban en `tests/unit/test_build_memoria.py`.
+**Cómo se generó.** `scripts/build_memoria.py` solo usa la biblioteca estándar. Une los documentos en un Markdown con portada (quita la cabecera de cada uno, convierte las anclas de las decisiones y reescribe los enlaces entre documentos) y Pandoc lo convierte en PDF con XeLaTeX; antes, `mmdc` renderiza los diagramas Mermaid. Las funciones que deciden se prueban en `tests/unit/test_build_memoria.py`.
 
 **Configuración:**
 
@@ -52,6 +52,9 @@ La documentación del proyecto se escribe **a mano, en Markdown, en `docs/`**, y
 | Versión y nombre | `pyproject.toml` | El PDF se llama `taximetro-memoria-<versión>.pdf` |
 | Carpeta de salida | `--salida` | Por defecto `build/memoria`, que Git ignora |
 | Motor | Pandoc y XeLaTeX | Se instalan en la CI, no en el entorno de desarrollo |
+| Papel | A4 | El de uso habitual en España; Pandoc usa Carta por defecto ([D35](DECISIONS.md#d35)) |
+| Portada | `authors` de `pyproject.toml` y la fecha | «Developer Team: …» y la fecha de generación en formato `dd/mm/yyyy`, que en la CI es la hora UTC ([D35](DECISIONS.md#d35)) |
+| Diagramas | `mmdc` (`mermaid-cli`) | Cada bloque Mermaid se renderiza a PDF vectorial y se enlaza como imagen; se instala con `npm` en la CI ([D34](DECISIONS.md#d34)) |
 | Estructura | Clase `report` | Portada, índice y cada documento como capítulo en página nueva; los apartados conservan la numeración escrita en los documentos |
 | Fuente de código | DejaVu Sans Mono | Trae los trazos de los árboles de carpetas y de los diagramas; se instala en la CI |
 
@@ -61,11 +64,11 @@ La documentación del proyecto se escribe **a mano, en Markdown, en `docs/`**, y
 python scripts/build_memoria.py
 ```
 
-Escribe `build/memoria/memoria.md`. Si `pandoc` no está instalado, lo avisa y termina sin error: el PDF lo produce la CI.
+Escribe `build/memoria/memoria.md`. Si `pandoc` no está instalado, lo avisa y termina sin error: el PDF lo produce la CI. Con `mmdc` ausente ocurre lo mismo: los diagramas Mermaid quedan como código y el script lo avisa.
 
-**En GitHub Actions.** El workflow `.github/workflows/memoria.yml` se ejecuta en las PR que cambian `docs/`, el script o `pyproject.toml`, y a mano desde la pestaña *Actions*. Guarda el PDF como artefacto `memoria-pdf` durante 14 días; se baja desde la página de la ejecución o con `gh run download`. El PDF no se guarda en el repositorio.
+**En GitHub Actions.** El workflow `.github/workflows/memoria.yml` se ejecuta en las PR que cambian `docs/`, el script o `pyproject.toml`, y a mano desde la pestaña *Actions*. Instala Pandoc, XeLaTeX, Node 22 y `mermaid-cli`, y falla si `mmdc` no queda disponible. Guarda el PDF como artefacto `memoria-pdf` durante 14 días; se baja desde la página de la ejecución o con `gh run download`. El PDF no se guarda en el repositorio.
 
-**Límites conocidos:** los enlaces al README no funcionan dentro del PDF, los diagramas Mermaid salen como código y las marcas ✅ ⏳ ≥ ↔ y los círculos de colores del texto no se ven, porque su fuente no las trae. Las razones y las alternativas están en [D33](DECISIONS.md#d33).
+**Límites conocidos:** los enlaces al README no funcionan dentro del PDF y las marcas ✅ ⏳ ≥ ↔ y los círculos de colores del texto no se ven, porque su fuente no las trae. Las razones y las alternativas están en [D33](DECISIONS.md#d33).
 
 ## 3. `verificar.py`
 
