@@ -4,10 +4,16 @@
 
 from __future__ import annotations
 
+import argparse
 import re
+import shutil
+import subprocess
+import sys
 import tomllib
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
 
 # Documentos de docs/ que forman la memoria, en el orden en que aparecen.
 DOCUMENTS = (
@@ -114,3 +120,29 @@ def build(
     else:
         output(f"[Memoria] FALLO: pandoc terminó con el código {code}")
     return code
+
+
+def parse_args(argv: Sequence[str]) -> Path:
+    parser = argparse.ArgumentParser(
+        prog="build_memoria",
+        description="Ensambla la memoria técnica y, si hay Pandoc, genera el PDF.",
+    )
+    parser.add_argument(
+        "--salida", default="build/memoria", help="carpeta de salida (por defecto build/memoria)"
+    )
+    return Path(parser.parse_args(argv).salida)
+
+
+def launch(command: list[str]) -> int:
+    """Lanza una orden en la raíz del proyecto y devuelve su código de salida."""
+    return subprocess.run(command, cwd=ROOT, check=False).returncode
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    out_dir = parse_args(sys.argv[1:] if argv is None else argv)
+    return build(ROOT, ROOT / out_dir, launch, shutil.which("pandoc"))
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

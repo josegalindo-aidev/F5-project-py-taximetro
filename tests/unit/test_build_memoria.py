@@ -2,12 +2,15 @@
 # fuente: tests/unit/test_build_memoria.py
 """Script de la memoria técnica: cómo se prepara cada documento antes de ensamblarlo."""
 
+from pathlib import Path
+
 from scripts.build_memoria import (
     assemble,
     build,
     clean_document,
     convert_anchors,
     pandoc_command,
+    parse_args,
     pdf_name,
     rewrite_links,
 )
@@ -233,3 +236,11 @@ def test_si_pandoc_falla_devuelve_su_codigo_de_salida(tmp_path):
     code = build(tmp_path, tmp_path / "out", FakeRunner(code=3), pandoc="pandoc", output=print)
 
     assert code == 3
+
+
+def test_por_defecto_la_salida_va_a_build_memoria():
+    assert parse_args([]) == Path("build/memoria")
+
+
+def test_la_carpeta_de_salida_se_puede_elegir():
+    assert parse_args(["--salida", "otra/carpeta"]) == Path("otra/carpeta")
