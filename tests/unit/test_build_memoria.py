@@ -3,6 +3,7 @@
 """Script de la memoria técnica: cómo se prepara cada documento antes de ensamblarlo."""
 
 import json
+import tomllib
 from datetime import date
 from pathlib import Path
 
@@ -526,3 +527,9 @@ def test_build_sin_autores_en_pyproject_no_pone_equipo(tmp_path):
     build(tmp_path, tmp_path / "out", FakeRunner(), pandoc="pandoc", output=lambda _: None)
 
     assert "author:" not in (tmp_path / "out" / "memoria.md").read_text(encoding="utf-8")
+
+
+def test_pyproject_define_el_equipo_que_firma_la_portada():
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
+
+    assert team_name(project) == "Jose Galindo"
