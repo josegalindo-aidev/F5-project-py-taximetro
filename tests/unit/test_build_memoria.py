@@ -267,3 +267,7 @@ def test_cada_documento_de_docs_se_incluye_o_se_excluye_a_proposito():
 
     assert docs <= set(DOCUMENTS) | set(EXCLUDED), "documento sin decidir si va en la memoria"
     assert set(DOCUMENTS) <= docs, "la memoria incluye un documento que no existe"
+
+
+def test_el_codigo_usa_una_fuente_con_los_trazos_de_los_arboles_de_carpetas():
+    assert "--variable=monofont:DejaVu Sans Mono" in pandoc_command("a.md", "a.pdf")

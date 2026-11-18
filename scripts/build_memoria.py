@@ -86,6 +86,7 @@ def pandoc_command(source: str, target: str) -> list[str]:
         "--top-level-division=chapter",
         "--variable=documentclass:report",
         "--variable=colorlinks:true",
+        "--variable=monofont:DejaVu Sans Mono",
         "--variable=geometry:margin=2.5cm",
         "-o",
         target,
