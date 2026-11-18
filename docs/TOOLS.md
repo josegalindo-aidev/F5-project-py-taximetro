@@ -48,7 +48,7 @@ La documentación del proyecto se escribe **a mano, en Markdown, en `docs/`**, y
 | Qué | Dónde | Detalle |
 |---|---|---|
 | Documentos y orden | `DOCUMENTS` en el script | Arquitectura, diseño, decisiones, pruebas, uso y guía de trabajo |
-| Documentos excluidos | `EXCLUDED` en el script | `TOOLS.md`. Un test obliga a que cada documento de `docs/` esté en una de las dos listas |
+| Documentos excluidos | `EXCLUDED` en el script | `TOOLS.md` y `AUTOEVALUACION.md`. Un test obliga a que cada documento de `docs/` esté en una de las dos listas |
 | Versión y nombre | `pyproject.toml` | El PDF se llama `taximetro-memoria-<versión>.pdf` |
 | Carpeta de salida | `--salida` | Por defecto `build/memoria`, que Git ignora |
 | Motor | Pandoc y XeLaTeX | Se instalan en la CI, no en el entorno de desarrollo |
