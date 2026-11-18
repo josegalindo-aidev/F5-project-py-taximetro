@@ -6,6 +6,17 @@ from __future__ import annotations
 
 import re
 
+# Documentos de docs/ que forman la memoria, en el orden en que aparecen.
+DOCUMENTS = (
+    "ARCHITECTURE.md",
+    "DESIGN.md",
+    "DECISIONS.md",
+    "TESTING.md",
+    "USAGE.md",
+    "CONTRIBUTING.md",
+)
+TITLE = "Memoria técnica del taxímetro digital (TTX-247)"
+
 _HEADER_COMMENT = re.compile(r"\A\s*<!--.*?-->\s*", re.DOTALL)
 _FIRST_TITLE = re.compile(r"^# (.+?)[ \t]*$", re.MULTILINE)
 _HTML_ANCHOR = re.compile(r'<a id="([^"]+)"></a>')
@@ -34,3 +45,14 @@ def rewrite_links(text: str, anchors: dict[str, str]) -> str:
 def convert_anchors(text: str) -> str:
     """Convierte las anclas HTML en anclas de Pandoc, que el PDF sí conserva."""
     return _HTML_ANCHOR.sub(r"[]{#\1}", text)
+
+
+def assemble(texts: dict[str, str], version: str) -> str:
+    """Une los documentos de la memoria, en orden y con portada, en un solo Markdown."""
+    anchors = {name: name.removesuffix(".md").lower() for name in DOCUMENTS}
+    cover = f'---\ntitle: "{TITLE}"\nsubtitle: "Versión {version}"\nlang: es\n---\n'
+    chapters = [
+        rewrite_links(convert_anchors(clean_document(texts[name], anchors[name])), anchors)
+        for name in DOCUMENTS
+    ]
+    return "\n".join([cover, *chapters])
