@@ -21,6 +21,7 @@ from scripts.build_memoria import (
     parse_args,
     pdf_name,
     rewrite_links,
+    team_name,
 )
 
 HEADER = "<!--\nProyecto: py-taximetro\nfuente: docs/USAGE.md\n-->\n\n"
@@ -478,3 +479,50 @@ def test_la_portada_sigue_siendo_un_bloque_de_metadatos_valido():
     cover = memoria.split("---\n")[1]
     assert cover.splitlines()[0].startswith("title:")
     assert memoria.startswith("---\n") and memoria.count("---\n") >= 2
+
+
+def test_el_equipo_es_el_nombre_del_autor_del_proyecto():
+    assert team_name({"authors": [{"name": "Jose Galindo"}]}) == "Jose Galindo"
+
+
+def test_con_varios_autores_los_nombres_se_unen_con_comas():
+    project = {"authors": [{"name": "Ana"}, {"name": "Luis"}]}
+
+    assert team_name(project) == "Ana, Luis"
+
+
+def test_sin_autores_no_hay_equipo():
+    assert team_name({}) is None
+    assert team_name({"authors": []}) is None
+
+
+def test_un_autor_sin_nombre_no_cuenta_como_equipo():
+    assert team_name({"authors": [{"email": "a@b.c"}]}) is None
+
+
+def test_build_pone_en_la_portada_el_equipo_de_pyproject_y_la_fecha_de_hoy(tmp_path):
+    make_project(tmp_path)
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nversion = "9.8.7"\nauthors = [{ name = "Equipo Uno" }]\n', encoding="utf-8"
+    )
+
+    build(
+        tmp_path,
+        tmp_path / "out",
+        FakeRunner(),
+        pandoc="pandoc",
+        output=lambda _: None,
+        today=date(2026, 11, 18),
+    )
+
+    memoria = (tmp_path / "out" / "memoria.md").read_text(encoding="utf-8")
+    assert 'author: "Developer Team: Equipo Uno"' in memoria
+    assert 'date: "18/11/2026"' in memoria
+
+
+def test_build_sin_autores_en_pyproject_no_pone_equipo(tmp_path):
+    make_project(tmp_path)
+
+    build(tmp_path, tmp_path / "out", FakeRunner(), pandoc="pandoc", output=lambda _: None)
+
+    assert "author:" not in (tmp_path / "out" / "memoria.md").read_text(encoding="utf-8")
