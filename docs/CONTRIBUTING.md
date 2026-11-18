@@ -51,7 +51,7 @@ Este es el recorrido de cualquier cambio, también de los pequeños (una línea 
    ```
 
 2. **Desarrollar con TDD**: test en rojo, código mínimo en verde y refactor. Un commit por paso con sentido, en formato Conventional Commits (apartado 7).
-3. **Comprobar en local antes de subir** (no hay CI todavía): `python -m pytest` y `python -m ruff check src tests`, sin fallos.
+3. **Comprobar en local antes de subir** (no hay CI de pruebas todavía): `python -m pytest` y `python -m ruff check src tests`, sin fallos. Si la PR cambia `docs/`, el workflow *Memoria técnica* genera además el PDF en GitHub Actions y es el que comprueba que los documentos se ensamblan ([D33](DECISIONS.md#d33)).
 4. **Subir la rama y abrir la PR hacia la rama de release**, no hacia `main`. Enlazar el issue con `Refs #n`.
 
    ```bash
