@@ -29,7 +29,7 @@ El taxímetro funciona por línea de comandos (Fase 1, más US-07 y TK-04 de la 
 - permite consultar las carreras de hoy o de otro día, con su hora, su importe y el total (US-05),
 - registra el inicio, los cambios de estado y el fin de cada carrera en un log de operación para auditar el uso, sin que un fallo del log impida cobrar (US-06).
 
-Este documento describe **cómo está construido** (módulos), **qué hace** (arquitectura funcional) y **por qué** se diseñó así (decisiones). Las fases 2 a 4 se recogen como evolución prevista en la sección 9.
+Este documento describe **cómo está construido** (módulos) y **qué hace** (arquitectura funcional). El **porqué** de cada decisión de diseño está en [DECISIONS.md](DECISIONS.md). Las fases 2 a 4 se recogen como evolución prevista en la sección 9.
 
 ---
 
@@ -58,7 +58,7 @@ __main__ · bootstrap · settings   (la raíz: conectan todo)
       →  infra  →  core
 ```
 
-El núcleo no conoce a nadie. Esa regla es la que permite probarlo sin teclado, sin pantalla y sin esperar tiempo real. No es solo una convención: `tests/test_architecture.py` lee los imports de cada fichero y falla si `core/` importa de otra capa o si `ui/` e `infra/` importan algo que no sea `core/` (decisión D25).
+El núcleo no conoce a nadie. Esa regla es la que permite probarlo sin teclado, sin pantalla y sin esperar tiempo real. No es solo una convención: `tests/test_architecture.py` lee los imports de cada fichero y falla si `core/` importa de otra capa o si `ui/` e `infra/` importan algo que no sea `core/` (decisión [D25](DECISIONS.md#d25)).
 
 ### 2.2 Diagrama de componentes
 
@@ -128,7 +128,7 @@ Los bloques marcados como `planificado` (GUI, API y el repositorio SQL) aún no 
 | `tariff.py` | `Tariff`: precio por segundo parado y en movimiento. Es inmutable (`frozen`), rechaza valores negativos y expone `rate_for(state)`. Los valores reales los aporta el cargador de tarifas (`infra/`). | `state`, `errors` | ✅ |
 | `trip.py` | `Trip`: una carrera. Acumula el importe por tramos, cierra un tramo en cada cambio de estado y redondea el total a céntimos. **No conoce ningún reloj**: recibe el instante (`at`) en cada operación y, opcionalmente, la fecha y hora de pared (`when`). Acumula también los segundos parado y en movimiento, y expone `started_at` y `finished_at`. `Trip.restore(...)` reconstruye una carrera ya terminada a partir de los datos guardados. | `state`, `tariff`, `errors` | ✅ |
 | `trip_service.py` | `TripService`: caso de uso que **opera** el taxímetro. Mantiene la carrera activa, lee los dos relojes y delega el cálculo en `Trip`. `status()` entrega el estado de la carrera en curso ya calculado (`TripStatus`: estado e importe), de modo que la interfaz no lee la entidad `Trip`. Al finalizar guarda la carrera en el repositorio y libera la carrera activa para encadenar la siguiente, **incluso si el guardado falla** (en ese caso lanza `TripNotSaved` con el total). Anota en el registro de eventos el inicio, los cambios de estado, el fin y las carreras no guardadas; si el registro falla, lo ignora (`_log`). | `trip`, `tariff`, `ports`, `errors` | ✅ |
-| `day_report.py` | `DayReport`: caso de uso de **consulta**. `for_day(día)` devuelve un `DaySummary` (día, carreras, número y total) con las carreras terminadas ese día; sin día, las de hoy según el reloj de pared. Solo lee del repositorio: no opera el taxímetro (decisión D26). | `trip`, `ports` | ✅ |
+| `day_report.py` | `DayReport`: caso de uso de **consulta**. `for_day(día)` devuelve un `DaySummary` (día, carreras, número y total) con las carreras terminadas ese día; sin día, las de hoy según el reloj de pared. Solo lee del repositorio: no opera el taxímetro (decisión [D26](DECISIONS.md#d26)). | `trip`, `ports` | ✅ |
 | `ports.py` | Contratos (`Protocol`): `Clock` (segundos monotónicos, para medir duraciones), `WallClock` (fecha y hora con zona horaria, para saber *cuándo*), `TripRepository` (`save`, `list_finished` y `check`) y `EventLog` (`record`: anota un evento con su hora). | `trip` | ✅ |
 
 **API pública de `Trip`:**
@@ -272,7 +272,7 @@ Los tres módulos de la raíz son los únicos que conocen todas las capas (*comp
 | `bootstrap.py` | `build_application(settings, clock, wall_clock)` crea el repositorio JSON y el registro de eventos con esas rutas, carga las tarifas, monta `TripService` y `DayReport`, **comprueba** el historial (`check()`) y la carpeta de logs, y devuelve una `Application` con el servicio, el informe y las notas `Historial: <ruta>` y `Logs: <ruta>`. Lanza `TariffFileError`, `TripHistoryError` o `EventLogError` si algo impide arrancar. Contiene también `local_now()`, el reloj de pared real. |
 | `__main__.py` | `main(rates_path, data_dir, clock, input_fn, output_fn)`: construye los ajustes, pide la aplicación a `bootstrap`, convierte los tres errores de arranque en `Error: …` por `stderr` con código de salida `1` y lanza la CLI. Devuelve `0` si todo va bien. Es un cableado fino: la `Application` es lo mismo que pedirían una GUI o una API. |
 
-Reloj, entrada y salida se inyectan, por lo que el arranque completo se prueba sin teclado ni esperas. Además, el arranque real se prueba lanzando `python -m taximetro` en un proceso aparte (decisión D29).
+Reloj, entrada y salida se inyectan, por lo que el arranque completo se prueba sin teclado ni esperas. Además, el arranque real se prueba lanzando `python -m taximetro` en un proceso aparte (decisión [D29](DECISIONS.md#d29)).
 
 #### Ubicaciones de datos
 
@@ -282,7 +282,7 @@ Reloj, entrada y salida se inyectan, por lo que el arranque completo se prueba s
 | Historial (`trips.json`) | `TAXIMETRO_DATA_DIR` | `data/` | ✅ |
 | Logs de operación | `TAXIMETRO_LOG_DIR` | `logs/` | ✅ |
 
-Los datos y los logs son **dos carpetas independientes** para poder montarlas en ubicaciones distintas en producción. Se configuran como carpetas y no como ficheros porque la escritura atómica necesita crear un temporal junto al fichero final, y montar un único fichero lo impediría (decisión D18).
+Los datos y los logs son **dos carpetas independientes** para poder montarlas en ubicaciones distintas en producción. Se configuran como carpetas y no como ficheros porque la escritura atómica necesita crear un temporal junto al fichero final, y montar un único fichero lo impediría (decisión [D18](DECISIONS.md#d18)).
 
 ### 3.5 Elementos que existen pero aún no se usan
 
@@ -414,7 +414,7 @@ flowchart TD
     J -->|EventLogError| F
 ```
 
-Si el fichero de tarifas, el historial o la carpeta de logs son inválidos el programa **no arranca**: no existe ninguna tarifa por defecto (decisión D11), un historial dañado no se sobrescribe (decisión D17) y sin logs no hay auditoría (decisión D22).
+Si el fichero de tarifas, el historial o la carpeta de logs son inválidos el programa **no arranca**: no existe ninguna tarifa por defecto (decisión [D11](DECISIONS.md#d11)), un historial dañado no se sobrescribe (decisión [D17](DECISIONS.md#d17)) y sin logs no hay auditoría (decisión [D22](DECISIONS.md#d22)).
 
 ### 4.6 Manejo de errores
 
@@ -439,37 +439,7 @@ Con `time.monotonic` el reloj no retrocede, y `TripService` descarta la carrera 
 
 ## 5. Decisiones de diseño
 
-| # | Decisión | Motivo |
-|---|---|---|
-| D1 | **`Trip` no tiene reloj**: recibe `at` en cada operación y es el servicio quien lee el `Clock`. | El cálculo es determinista y se prueba sin esperas ni `sleep`. |
-| D2 | **Reloj inyectado** como dependencia (`Clock`): `time.monotonic` en producción y `FakeClock` en pruebas. | Permite simular el paso del tiempo a voluntad. `monotonic` no se ve afectado por cambios en la hora del sistema. |
-| D3 | **`Decimal` para el dinero**, nunca `float`. Los segundos se restan a partir de su representación textual. | Evita errores de redondeo binario. El redondeo solo se aplica al final. |
-| D4 | **Entrada y salida inyectadas en `Cli`** (`input_fn`, `output_fn`). | La CLI se prueba entera con una consola simulada. |
-| D5 | **La carrera activa vive en memoria** dentro de `TripService`; solo se guarda al terminar. | Una carrera en curso no tiene total ni fecha de fin. Guardar la carrera en curso se revisará con la API de la Fase 4. |
-| D6 | **`State` en su propio módulo.** | Rompe la dependencia circular `Tariff` ↔ `Trip`. `Trip` lo reexporta para no romper importaciones. |
-| D7 | **Las tarifas viven en `config/rates.toml`**, con los valores como **texto** (`"0.02"`). | Cambiar el cobro no exige tocar el código. Como texto, el valor es un `Decimal` exacto; un número sin comillas es un `float` binario con error de redondeo, y se rechaza. |
-| D8 | **Un único punto de arranque** (`__main__`), que delega el montaje en `bootstrap`. | Una interfaz futura (GUI o API) solo necesita su propio arranque y reutiliza el mismo núcleo. |
-| D9 | **Sin dependencias externas en ejecución** (`dependencies = []`). Solo la biblioteca estándar. | Mínima superficie; las extras `sql` y `api` se instalan cuando haga falta. |
-| D10 | **Solo existen puertos con más de una implementación real** (`Clock`, `TripRepository`). | Evita abstracciones sin uso. Se añade un puerto cuando aparece una segunda implementación. |
-| D11 | **Un fichero de tarifas inválido impide arrancar**; no hay tarifa por defecto. | Cobrar con una tarifa equivocada es peor que no cobrar. El error sale por `stderr` y el código de salida es 1. |
-| D12 | **`main` devuelve el código de salida** y recibe ruta, reloj y consola inyectables. | El arranque completo se prueba sin teclado ni esperas; el bloque `if __name__ == "__main__"` lo traduce en `SystemExit`. |
-| D13 | **El cargador convierte todo fallo en `TariffFileError`** y conserva el error original (`from error`). | Quien lo llama gestiona un solo tipo de error y no pierde la información técnica. Se comprobó con una batería de entradas anómalas. |
-| D14 | **Dos relojes**: `Clock` (monotónico, mide duraciones y se usa para cobrar) y `WallClock` (fecha y hora con zona, dice *cuándo*). `Trip` no lee ninguno. | El cobro no se altera si cambia la hora del sistema, y el historial puede decir cuándo ocurrió cada carrera. |
-| D15 | **Historial en JSON** con fechas ISO 8601 con zona e importes como texto. | Legible y editable a mano, sin dependencias externas, sin perder precisión de `Decimal`. |
-| D16 | **Escritura atómica**: temporal junto al fichero y `os.replace`. | Un corte a mitad de escritura no destruye el historial anterior. |
-| D17 | **Un historial dañado o ilegible impide arrancar y nunca se sobrescribe**; un fallo al guardar nunca esconde el total (`TripNotSaved`). | Perder datos es peor que no arrancar, y el taxista debe poder cobrar siempre. |
-| D18 | **Datos y logs en carpetas independientes**, configuradas como **directorios** (`TAXIMETRO_DATA_DIR`, `TAXIMETRO_LOG_DIR`), no como ficheros. | Se pueden montar en ubicaciones distintas en producción, y la escritura atómica necesita crear un temporal junto al fichero final. |
-| D19 | **Contrato común** para los repositorios y la validación de guardado en un único sitio (`ensure_can_be_saved`). | Una implementación nueva solo se añade a la fixture parametrizada; las reglas no se duplican. |
-| D20 | **El registro de eventos es un puerto propio (`EventLog`)**, con la hora del reloj de pared inyectado, y no el módulo `logging` de Python. | La marca de tiempo es determinista en las pruebas, no hay configuración global compartida y se prueba con el mismo estilo que el resto (doble de pruebas, mutación). |
-| D21 | **Formato JSON Lines, un fichero por día**; nombres de evento en español y estado con el valor interno (`stopped`, `moving`). | Una línea por evento se lee y se filtra con herramientas, no se corrompe si el programa se corta, y el formato de datos no depende del idioma de la consola. |
-| D22 | **Un fallo del registro nunca impide cobrar, pero una carpeta de logs inservible impide arrancar.** | Cobrar es lo primero durante la jornada; pero los logs existen para auditar, y arrancar sin poder auditar vaciaría su propósito. |
-| D23 | **La cobertura del núcleo tiene un umbral del 90 %**, con ramas, configurado en `pyproject.toml`, y un test impide relajarlo. | El criterio de TK-03 se cumple hoy con un 100 %, pero solo un umbral que falla evita que baje sin que nadie lo note, y el núcleo es donde está el negocio. |
-| D24 | **Los mensajes de error se redactan para quien no conoce Python**: nombran la ruta y dicen dónde mirar (línea y columna, número de carrera, qué fichero estorba), sin el texto de la excepción. | Los errores salen por pantalla al arrancar, donde los lee un responsable y no un programador; para depurar queda el error original encadenado (`from error`). |
-| D25 | **Las capas y su regla de dependencias se comprueban con un test** (`tests/test_architecture.py`, que lee los imports de cada fichero). | Una regla que solo está escrita se rompe sin que nadie lo note: así `core/` no puede importar de `ui/` ni de `infra/`, y estas dos solo pueden importar `core/`. |
-| D26 | **`TripService` opera y `DayReport` consulta.** El servicio entrega el estado de la carrera en curso ya calculado (`TripStatus`) y la interfaz no lee la entidad `Trip`. | Una interfaz nueva (GUI, API) reutiliza los dos casos de uso sin conocer el modelo interno, y cada clase tiene una sola razón para cambiar. |
-| D27 | **Las rutas viven en `Settings`**: valor explícito, luego variable de entorno y luego el valor por defecto del proyecto. | Un único sitio decide de dónde salen las tarifas, los datos y los logs, y se prueba sin arrancar nada. |
-| D28 | **`bootstrap.build_application` monta y comprueba** las piezas, y `main` solo lo llama y traduce los errores en un código de salida. El puerto `TripRepository` tiene `check()` para validar el historial al arrancar. | El montaje se prueba con ficheros temporales y sin consola, una interfaz futura lo reutiliza y ya no se lee «un día cualquiera» del historial como truco para detectar un fichero dañado. |
-| D29 | **El arranque real se prueba en un proceso aparte** (`python -m taximetro`) y la cobertura incluye los subprocesos (`patch = ["subprocess"]`). | Es lo que hace el usuario: comprueba que el programa arranca, que el código de salida llega al sistema y que escribe donde toca. Así el bloque `if __name__ == "__main__"` queda cubierto sin excluirlo de la medida. |
+Las decisiones de diseño, con su identificador, su motivo y dónde se ven, están en [DECISIONS.md](DECISIONS.md). Aquí se citan por su número, con un enlace (por ejemplo, [D25](DECISIONS.md#d25)).
 
 ---
 
@@ -493,7 +463,7 @@ El proyecto se desarrolla con **TDD**: primero el test en rojo, luego el código
 
 **Dobles de prueba** (`tests/fakes.py`): `FakeClock` (reloj que avanza a mano), `FakeWallClock` (reloj de pared controlable), `FakeEventLog` (registro de eventos en memoria), `FailingEventLog` (registro cuya escritura siempre falla), `BrokenRepository` (guardado que siempre falla), `UnreadableHistoryRepository` (consultar el historial siempre falla) y `ScriptedInput` (consola que devuelve comandos y avanza el reloj entre ellos). Los fixtures compartidos están en `tests/conftest.py`.
 
-**Cobertura:** 100 % en líneas y ramas, tanto en todo el proyecto como en el núcleo, al cerrar TK-05. El bloque `if __name__ == "__main__"` de `__main__.py` cuenta porque el arranque real se prueba en un proceso aparte y `pyproject.toml` activa la cobertura de subprocesos. `pyproject.toml` exige un mínimo del **90 %** para el núcleo: `python -m pytest --cov` falla si baja (decisión D23); el script de verificación comprueba además un mínimo del 80 % para todo el proyecto.
+**Cobertura:** 100 % en líneas y ramas, tanto en todo el proyecto como en el núcleo, al cerrar TK-05. El bloque `if __name__ == "__main__"` de `__main__.py` cuenta porque el arranque real se prueba en un proceso aparte y `pyproject.toml` activa la cobertura de subprocesos. `pyproject.toml` exige un mínimo del **90 %** para el núcleo: `python -m pytest --cov` falla si baja (decisión [D23](DECISIONS.md#d23)); el script de verificación comprueba además un mínimo del 80 % para todo el proyecto.
 
 **Pruebas de mutación manuales:** el cargador y el arranque se comprobaron rompiendo el código a propósito (quitar una validación, cambiar un mensaje, alterar el orden de los `except`…). Los tests detectaron todas las roturas deliberadas que se probaron al cerrar US-07. Al cerrar TK-04 se repitió sobre el repositorio JSON, el arranque, `TripService`, la CLI y la validación común: 26 mutantes, 26 detectados. Al cerrar US-05 y US-06 se repitió con el histórico y el registro de eventos: de 41 mutantes, 39 se detectaron a la primera y los dos supervivientes llevaron a eliminar código muerto y a cubrir un hueco de pruebas. Con los mensajes de error claros se probaron 14 mutantes más: 13 se detectaron y el superviviente, un mensaje con la ruta equivocada, llevó a comparar el texto exacto. Al cerrar TK-05 se repitió sobre las piezas nuevas (`Settings`, `DayReport`, `TripStatus`, `check()`, `bootstrap` y `main`): 35 mutantes, 35 detectados.
 
@@ -505,7 +475,7 @@ El proyecto se desarrolla con **TDD**: primero el test en rojo, luego el código
 |---|---|
 | Cabecera de cada fichero `.py` | Dos líneas al principio: `# Proyecto: py-taximetro` y `# fuente: <ruta desde la raíz>` (por ejemplo, `src/taximetro/core/trip.py`). Los ficheros vacíos, como los `__init__.py`, no la llevan. La regla se comprueba en `tests/test_conventions.py`. |
 | Versión | La versión vive solo en `pyproject.toml`. El criterio de versionado y el estado de las versiones publicadas se documentan únicamente en el [README](../README.md#versionado); no se repiten en ningún otro fichero. |
-| Documentación | `README.md` (entrada del repositorio: instalación, arranque y enlaces), `docs/USAGE.md` (manual de uso), `docs/ARCHITECTURE.md` (este documento), `docs/TESTING.md` (cómo se prueba) y `docs/CONTRIBUTING.md` (flujo de trabajo). El README resume y enlaza; el detalle vive en `docs/`, y el README es el único documento de la raíz. Los documentos `.md` llevan el **nombre en mayúsculas** (`USAGE.md`, `ARCHITECTURE.md`…) para distinguirlos del código y de los tests, que van en minúsculas. |
+| Documentación | `README.md` (entrada del repositorio: instalación, arranque y enlaces), `docs/USAGE.md` (manual de uso), `docs/ARCHITECTURE.md` (este documento), `docs/DECISIONS.md` (registro de decisiones de diseño), `docs/TESTING.md` (cómo se prueba) y `docs/CONTRIBUTING.md` (flujo de trabajo). El README resume y enlaza; el detalle vive en `docs/`, y el README es el único documento de la raíz. Los documentos `.md` llevan el **nombre en mayúsculas** (`USAGE.md`, `ARCHITECTURE.md`…) para distinguirlos del código y de los tests, que van en minúsculas. |
 | Commits | Conventional Commits (`feat`, `fix`, `test`, `refactor`, `docs`, `chore`) con referencia al issue (`Refs #n`) |
 | Ramas y PR | Una rama de release por fase y una rama por funcionalidad; `main` solo avanza tras la demo. Reglas completas en [CONTRIBUTING.md](CONTRIBUTING.md). |
 | Seguimiento | Tablero GitHub Projects «TTX-247 Taxímetro» (campos Fase, Tipo, MoSCoW, Estimate y Status) y backlog en `docs/project_backlog.xlsx` |
@@ -566,7 +536,7 @@ python scripts/verificar.py --lint
 | **Fase 4** — Producción | Repositorio SQL; `ui/api/` (API REST: iniciar, cambiar, finalizar, consultar); panel web para el responsable de flota; despliegue con un único comando (Docker) | TK-06 (#16), TK-07 (#17), TK-08 (#18), TK-09 (#19) |
 | **Transversal** | README con instrucciones y justificación de librerías; tablero y Conventional Commits | TK-10 (#20), TK-11 (#21) |
 
-**Impacto previsto en la arquitectura:** la API (Fase 4) no tiene estado entre peticiones, así que la carrera activa deberá guardarse en el repositorio con `save` (D5 se revisará entonces). El diseño actual ya lo permite porque `TripRepository.save` está pensado para carreras en curso y terminadas.
+**Impacto previsto en la arquitectura:** la API (Fase 4) no tiene estado entre peticiones, así que la carrera activa deberá guardarse en el repositorio con `save` ([D5](DECISIONS.md#d5) se revisará entonces). El diseño actual ya lo permite porque `TripRepository.save` está pensado para carreras en curso y terminadas.
 
 ---
 
@@ -576,7 +546,7 @@ python scripts/verificar.py --lint
 |---|---|---|
 | L1 | **Regla de 20 km/h.** El enunciado cobra la tarifa baja por debajo de 20 km/h, pero el modelo solo distingue parado y en movimiento, sin velocidad. | Valorar un estado derivado de la velocidad si el enunciado lo exige. |
 | L2 | **Las tarifas se leen una sola vez, al arrancar**: cambiar el fichero exige reiniciar el programa. | Aceptable; la recarga en caliente queda fuera del alcance. |
-| L3 | **Solo se guardan las carreras finalizadas**: una carrera en curso al cerrar el programa no se cobra ni se recupera. | Revisar con la API de la Fase 4 (D5). |
+| L3 | **Solo se guardan las carreras finalizadas**: una carrera en curso al cerrar el programa no se cobra ni se recupera. | Revisar con la API de la Fase 4 ([D5](DECISIONS.md#d5)). |
 | L4 | Una sola carrera activa a la vez: un taxi, un taxímetro. No hay soporte multi-taxi. | Fuera del alcance del prototipo. |
 | L5 | **El historial JSON se reescribe entero en cada guardado** y no admite dos programas escribiendo a la vez en la misma carpeta (leer-modificar-escribir): podrían perderse carreras. | Suficiente para un taxi; el repositorio SQL de la Fase 4 lo resuelve. |
 | L6 | El módulo `taximetro.core.ports` importa `Trip`, lo que acopla el contrato al modelo. Es aceptable mientras `Trip` sea el único agregado. | Revisar si el modelo crece. |
