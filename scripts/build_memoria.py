@@ -130,6 +130,7 @@ def pandoc_command(source: str, target: str) -> list[str]:
         "--variable=documentclass:report",
         "--variable=colorlinks:true",
         "--variable=monofont:DejaVu Sans Mono",
+        "--variable=papersize:a4",
         "--variable=geometry:margin=2.5cm",
         "-o",
         target,
