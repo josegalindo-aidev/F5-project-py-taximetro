@@ -22,7 +22,7 @@ feat/us-NN-…            ●         ●               una rama por historia o 
 | `main` | Último estado entregado y demostrado. Solo recibe la rama de release de cada fase y las correcciones urgentes (apartado 6). |
 | `release/X.Y.Z` | Integración de una fase. Se crea desde `main` al empezar la fase y se borra al promoverla. Vive pocos días. |
 | `feat/…`, `fix/…`, `docs/…`, `chore/…`, `test/…` | Una por historia o tarea. Se crea desde la rama de release, se integra en ella con una PR y se borra al fusionar. |
-| Etiqueta `vX.Y.Z` | Marca el momento exacto de una release. Se crea sobre `main` tras la promoción, junto con su Release en GitHub. |
+| Etiqueta `vX.Y.Z` | Marca el momento exacto de una release. Se crea sobre `main` tras la promoción, junto con su Release en GitHub. Las pre-releases de una fase en curso son la excepción: se etiquetan sobre la rama de release (apartado 5). |
 
 **Nombres.** La rama de release no lleva la `v` (`release/X.Y.Z`); la etiqueta sí (`vX.Y.Z`). Las ramas de trabajo siguen el tipo del commit y el identificador del issue: `feat/us-07-tarifas-en-fichero`, `fix/redondeo-total`, `docs/guia-de-trabajo`.
 
@@ -81,12 +81,36 @@ GitHub solo cierra un issue por `Closes #n` cuando la PR llega a la **rama por d
 ## 5. Cerrar una fase: promoción a `main`
 
 1. La rama de release contiene todas las funcionalidades de la fase y sus pruebas pasan.
-2. **Subir la versión por PR**: una rama `chore/…` desde la release que cambie `version` en `pyproject.toml` y la tabla de versiones del [README](../README.md#versionado), integrada con el flujo del apartado 3.
+2. **Subir la versión por PR**: una rama `chore/…` desde la release que cambie `version` en `pyproject.toml` (de `X.Y.Z.dev0`, o de `X.Y.Za(N+1).dev0` si hubo pre-releases, a `X.Y.Z`) y la tabla de versiones del [README](../README.md#versionado), integrada con el flujo del apartado 3.
 3. Hacer la **demo** desde la rama de release.
 4. **Registrar la demo y la entrega** en la hoja *Fases* del backlog, también por PR hacia la rama de release. Debe hacerse antes de promover: después solo se admiten PR a `main` con el método *Merge*.
 5. Abrir la PR de promoción `release/X.Y.Z` → `main`, con la plantilla de release. Desde la web, añadir `?template=release.md` a la URL de comparación. La plantilla lista los `Closes #n` de la fase.
 6. Fusionar con **"Create a merge commit"**. Es el único método que admite `main`, y así conserva los mismos commits que la rama de release. La rama de release se borra sola.
 7. Crear la etiqueta `vX.Y.Z` sobre `main` y su Release en GitHub.
+
+### Versiones intermedias: desarrollo y pre-release
+
+La rama de release no lleva la versión de la fase hasta cerrarla. Los números concretos están en el [README](../README.md#versionado); aquí, la regla:
+
+| Momento | `version` en `pyproject.toml` | Etiqueta |
+|---|---|---|
+| Al abrir la fase y durante el desarrollo | `X.Y.Z.dev0` | Ninguna |
+| Pre-release para mostrar el avance de una fase en curso | `X.Y.ZaN` | `vX.Y.Z-alpha.N`, sobre la rama de release, con su Release marcada como *pre-release* |
+| Seguir desarrollando tras una pre-release | `X.Y.Za(N+1).dev0` | Ninguna |
+| Al cerrar la fase | `X.Y.Z` | `vX.Y.Z`, sobre `main` tras la promoción |
+
+Para publicar una pre-release:
+
+1. PR `chore/…` hacia la release que cambie `version` a `X.Y.ZaN`, con el flujo del apartado 3.
+2. Comprobar en un clon limpio de esa etiqueta que se instala y que las pruebas pasan.
+3. Crear la etiqueta `vX.Y.Z-alpha.N` sobre el commit de la rama de release y su Release en GitHub, **marcada como pre-release** y con las notas de lo que incluye y de lo que falta. Una pre-release no ocupa el sello *Latest*.
+4. PR `chore/…` hacia la release que cambie `version` a `X.Y.Za(N+1).dev0`.
+
+Reglas:
+
+- La etiqueta y la `version` del commit etiquetado deben decir lo mismo (`vX.Y.Z-alpha.N` equivale a `X.Y.ZaN`). Las etiquetas son inmutables: se comprueba antes de crearla.
+- Una pre-release **no se promueve** a `main`: `main` solo avanza al cerrar la fase.
+- No se vuelve a `X.Y.Z.devM` tras publicar una pre-release: ese número es anterior a `X.Y.ZaN` y el orden retrocedería.
 
 ## 6. Correcciones urgentes
 
@@ -127,7 +151,7 @@ Si aparece un error en lo ya entregado:
 
 ## 9. Versiones
 
-El criterio y el estado de las versiones están **solo** en el [README](../README.md#versionado), y el número, en `pyproject.toml`. No se repiten en otros ficheros.
+El criterio y el estado de las versiones están **solo** en el [README](../README.md#versionado), y el número, en `pyproject.toml`. No se repiten en otros ficheros. Las versiones intermedias (`.dev` y pre-releases) se explican en el apartado 5.
 
 ## 10. Cambiar las reglas del repositorio
 
