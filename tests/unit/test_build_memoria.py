@@ -2,9 +2,11 @@
 # fuente: tests/unit/test_build_memoria.py
 """Script de la memoria técnica: cómo se prepara cada documento antes de ensamblarlo."""
 
+import json
 from pathlib import Path
 
 from scripts.build_memoria import (
+    CHROME_CONFIG,
     DOCUMENTS,
     EXCLUDED,
     ROOT,
@@ -13,6 +15,7 @@ from scripts.build_memoria import (
     clean_document,
     convert_anchors,
     extract_diagrams,
+    mermaid_command,
     pandoc_command,
     parse_args,
     pdf_name,
@@ -320,3 +323,25 @@ def test_no_toca_los_demas_bloques_de_codigo():
 
 def test_un_texto_sin_diagramas_no_cambia():
     assert extract_diagrams("# Título\n\nTexto.\n") == ("# Título\n\nTexto.\n", [])
+
+
+def test_mmdc_convierte_el_diagrama_en_el_pdf_indicado():
+    command = mermaid_command("d.mmd", "d.pdf", "chrome.json")
+
+    assert command[0] == "mmdc"
+    assert command[command.index("-i") + 1] == "d.mmd"
+    assert command[command.index("-o") + 1] == "d.pdf"
+
+
+def test_mmdc_recibe_la_configuracion_de_chrome():
+    command = mermaid_command("d.mmd", "d.pdf", "chrome.json")
+
+    assert command[command.index("-p") + 1] == "chrome.json"
+
+
+def test_mmdc_no_imprime_su_registro():
+    assert "--quiet" in mermaid_command("d.mmd", "d.pdf", "chrome.json")
+
+
+def test_la_configuracion_de_chrome_desactiva_el_sandbox_que_la_ci_no_permite():
+    assert "--no-sandbox" in json.loads(CHROME_CONFIG)["args"]
