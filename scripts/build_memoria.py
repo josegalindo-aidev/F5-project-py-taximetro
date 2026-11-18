@@ -79,7 +79,7 @@ def pandoc_command(source: str, target: str) -> list[str]:
     return [
         "pandoc",
         source,
-        "--from=markdown",
+        "--from=markdown+gfm_auto_identifiers",
         "--pdf-engine=xelatex",
         "--toc",
         "--toc-depth=3",
