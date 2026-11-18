@@ -84,6 +84,12 @@ def mermaid_command(source: str, target: str, chrome_config: str) -> list[str]:
     return ["mmdc", "-i", source, "-o", target, "-p", chrome_config, "--quiet"]
 
 
+def team_name(project: dict) -> str | None:
+    """Nombre del equipo: los autores de la tabla [project] de pyproject.toml."""
+    names = [author["name"] for author in project.get("authors", []) if "name" in author]
+    return ", ".join(names) or None
+
+
 def assemble(
     texts: dict[str, str],
     version: str,
@@ -157,19 +163,19 @@ def build(
     pandoc: str | None,
     output: Callable[[str], None] = print,
     mmdc: str | None = None,
+    today: date | None = None,
 ) -> int:
     """Escribe el Markdown ensamblado y, si hay Pandoc, lo convierte en PDF.
 
     Con mmdc, los diagramas Mermaid se renderizan a PDF y se enlazan como imágenes; sin él
-    se quedan como código.
+    se quedan como código. La portada lleva el equipo (autores de pyproject.toml) y la fecha.
     """
-    version = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))["project"][
-        "version"
-    ]
+    project = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))["project"]
+    version = project["version"]
     texts = {name: (root / "docs" / name).read_text(encoding="utf-8") for name in DOCUMENTS}
     out_dir.mkdir(parents=True, exist_ok=True)
     source = out_dir / "memoria.md"
-    markdown = assemble(texts, version)
+    markdown = assemble(texts, version, team=team_name(project), today=today)
     with_images, diagrams = extract_diagrams(markdown)
     if mmdc is not None:
         markdown = with_images
@@ -218,7 +224,14 @@ def launch(command: list[str]) -> int:
 def main(argv: Sequence[str] | None = None) -> int:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     out_dir = parse_args(sys.argv[1:] if argv is None else argv)
-    return build(ROOT, ROOT / out_dir, launch, shutil.which("pandoc"), mmdc=shutil.which("mmdc"))
+    return build(
+        ROOT,
+        ROOT / out_dir,
+        launch,
+        shutil.which("pandoc"),
+        mmdc=shutil.which("mmdc"),
+        today=date.today(),
+    )
 
 
 if __name__ == "__main__":
