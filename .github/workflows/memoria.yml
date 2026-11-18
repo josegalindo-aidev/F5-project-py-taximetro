@@ -36,6 +36,15 @@ jobs:
             pandoc texlive-xetex texlive-latex-recommended \
             texlive-fonts-recommended texlive-lang-spanish lmodern fonts-dejavu
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Instalar mermaid-cli
+        run: |
+          npm install -g @mermaid-js/mermaid-cli@12.2.0
+          mmdc --version
+
       - name: Generar la memoria
         run: python scripts/build_memoria.py
 
