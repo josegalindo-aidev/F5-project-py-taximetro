@@ -201,3 +201,14 @@ Al cerrar TK-04 se probaron 26 mutantes sobre el repositorio JSON, el arranque, 
 | Aceptación | Un test `test_usNN_…` por historia de usuario |
 | Sin tiempo real ni teclado | Siempre `FakeClock` y `ScriptedInput` |
 | Estilo | Líneas de hasta 100 caracteres, comprobado por `ruff` |
+
+## 8. Referencias
+
+Documentación oficial, en inglés, en la que se apoya la forma de probar.
+
+| Fuente | Qué se aplicó |
+|---|---|
+| [pytest](https://docs.pytest.org/) | *Fixtures*, `parametrize`, `monkeypatch` y `tmp_path` en toda la suite |
+| [coverage.py](https://coverage.readthedocs.io/) | Cobertura de ramas y umbral mínimo del núcleo (decisión D23 de [ARCHITECTURE.md](ARCHITECTURE.md#5-decisiones-de-diseño)) |
+| [Ruff](https://docs.astral.sh/ruff/) | Reglas de estilo y errores comunes, con líneas de hasta 100 caracteres |
+| [PEP 8](https://peps.python.org/pep-0008/) | Guía de estilo de Python, comprobada con Ruff |
