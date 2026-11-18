@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tomllib
 from collections.abc import Callable, Sequence
+from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -83,10 +84,20 @@ def mermaid_command(source: str, target: str, chrome_config: str) -> list[str]:
     return ["mmdc", "-i", source, "-o", target, "-p", chrome_config, "--quiet"]
 
 
-def assemble(texts: dict[str, str], version: str) -> str:
+def assemble(
+    texts: dict[str, str],
+    version: str,
+    team: str | None = None,
+    today: date | None = None,
+) -> str:
     """Une los documentos de la memoria, en orden y con portada, en un solo Markdown."""
     anchors = {name: name.removesuffix(".md").lower() for name in DOCUMENTS}
-    cover = f'---\ntitle: "{TITLE}"\nsubtitle: "Versión {version}"\nlang: es\n---\n'
+    cover = f'---\ntitle: "{TITLE}"\nsubtitle: "Versión {version}"\n'
+    if team is not None:
+        cover += f'author: "Developer Team: {team}"\n'
+    if today is not None:
+        cover += f'date: "{today:%d/%m/%Y}"\n'
+    cover += "lang: es\n---\n"
     chapters = [
         rewrite_links(convert_anchors(clean_document(texts[name], anchors[name])), anchors)
         for name in DOCUMENTS
