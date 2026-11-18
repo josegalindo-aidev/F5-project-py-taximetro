@@ -5,6 +5,9 @@
 from __future__ import annotations
 
 import re
+import tomllib
+from collections.abc import Callable
+from pathlib import Path
 
 # Documentos de docs/ que forman la memoria, en el orden en que aparecen.
 DOCUMENTS = (
@@ -78,3 +81,36 @@ def pandoc_command(source: str, target: str) -> list[str]:
         "-o",
         target,
     ]
+
+
+# Lanza una orden y devuelve su código de salida.
+Runner = Callable[[list[str]], int]
+
+
+def build(
+    root: Path,
+    out_dir: Path,
+    runner: Runner,
+    pandoc: str | None,
+    output: Callable[[str], None] = print,
+) -> int:
+    """Escribe el Markdown ensamblado y, si hay Pandoc, lo convierte en PDF."""
+    version = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))["project"][
+        "version"
+    ]
+    texts = {name: (root / "docs" / name).read_text(encoding="utf-8") for name in DOCUMENTS}
+    out_dir.mkdir(parents=True, exist_ok=True)
+    source = out_dir / "memoria.md"
+    source.write_text(assemble(texts, version), encoding="utf-8")
+    output(f"[Memoria] Markdown ensamblado: {source}")
+
+    if pandoc is None:
+        output("[Memoria] AVISO: pandoc no está instalado, no se genera el PDF (lo hace la CI).")
+        return 0
+    target = out_dir / pdf_name(version)
+    code = runner(pandoc_command(str(source), str(target)))
+    if code == 0:
+        output(f"[Memoria] PDF generado: {target}")
+    else:
+        output(f"[Memoria] FALLO: pandoc terminó con el código {code}")
+    return code

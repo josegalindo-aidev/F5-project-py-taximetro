@@ -4,6 +4,7 @@
 
 from scripts.build_memoria import (
     assemble,
+    build,
     clean_document,
     convert_anchors,
     pandoc_command,
@@ -172,3 +173,63 @@ def test_pandoc_genera_indice_y_numera_los_apartados():
 
     assert "--toc" in command
     assert "--number-sections" in command
+
+
+def make_project(root):
+    (root / "docs").mkdir()
+    (root / "pyproject.toml").write_text('[project]\nversion = "9.8.7"\n', encoding="utf-8")
+    for name, text in sample_texts().items():
+        (root / "docs" / name).write_text(text, encoding="utf-8")
+
+
+class FakeRunner:
+    def __init__(self, code=0):
+        self.code = code
+        self.commands = []
+
+    def __call__(self, command):
+        self.commands.append(command)
+        return self.code
+
+
+def test_escribe_el_markdown_ensamblado_con_la_version_del_proyecto(tmp_path):
+    make_project(tmp_path)
+
+    build(tmp_path, tmp_path / "out", FakeRunner(), pandoc="pandoc", output=lambda _: None)
+
+    memoria = (tmp_path / "out" / "memoria.md").read_text(encoding="utf-8")
+    assert 'subtitle: "Versión 9.8.7"' in memoria
+    assert "# Documento DESIGN.md {#design}" in memoria
+
+
+def test_con_pandoc_lo_lanza_para_obtener_el_pdf_con_el_nombre_de_la_version(tmp_path):
+    make_project(tmp_path)
+    runner = FakeRunner()
+
+    code = build(tmp_path, tmp_path / "out", runner, pandoc="pandoc", output=lambda _: None)
+
+    assert code == 0
+    (command,) = runner.commands
+    assert command[1].endswith("memoria.md")
+    assert command[command.index("-o") + 1].endswith("taximetro-memoria-9.8.7.pdf")
+
+
+def test_sin_pandoc_deja_el_markdown_avisa_y_no_falla(tmp_path):
+    make_project(tmp_path)
+    runner = FakeRunner()
+    lines = []
+
+    code = build(tmp_path, tmp_path / "out", runner, pandoc=None, output=lines.append)
+
+    assert code == 0
+    assert runner.commands == []
+    assert (tmp_path / "out" / "memoria.md").exists()
+    assert any("pandoc" in line.lower() for line in lines)
+
+
+def test_si_pandoc_falla_devuelve_su_codigo_de_salida(tmp_path):
+    make_project(tmp_path)
+
+    code = build(tmp_path, tmp_path / "out", FakeRunner(code=3), pandoc="pandoc", output=print)
+
+    assert code == 3
