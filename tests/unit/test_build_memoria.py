@@ -174,11 +174,19 @@ def test_pandoc_usa_xelatex_para_los_acentos_y_los_simbolos():
     assert "--pdf-engine=xelatex" in pandoc_command("a.md", "a.pdf")
 
 
-def test_pandoc_genera_indice_y_numera_los_apartados():
+def test_pandoc_genera_indice():
+    assert "--toc" in pandoc_command("a.md", "a.pdf")
+
+
+def test_pandoc_no_numera_los_apartados_porque_los_documentos_ya_van_numerados():
+    assert "--number-sections" not in pandoc_command("a.md", "a.pdf")
+
+
+def test_cada_documento_es_un_capitulo_en_pagina_nueva_con_portada_propia():
     command = pandoc_command("a.md", "a.pdf")
 
-    assert "--toc" in command
-    assert "--number-sections" in command
+    assert "--top-level-division=chapter" in command
+    assert "--variable=documentclass:report" in command
 
 
 def make_project(root):
