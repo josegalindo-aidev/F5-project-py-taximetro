@@ -63,7 +63,7 @@ Escribe `build/memoria/memoria.md`. Si `pandoc` no está instalado, lo avisa y t
 
 **En GitHub Actions.** El workflow `.github/workflows/memoria.yml` se ejecuta en las PR que cambian `docs/`, el script o `pyproject.toml`, y a mano desde la pestaña *Actions*. Guarda el PDF como artefacto `memoria-pdf` durante 14 días; se baja desde la página de la ejecución o con `gh run download`. El PDF no se guarda en el repositorio.
 
-**Límites conocidos:** los enlaces al README no funcionan dentro del PDF y los diagramas Mermaid salen como código. Las razones y las alternativas están en [D33](DECISIONS.md#d33).
+**Límites conocidos:** los enlaces al README no funcionan dentro del PDF, los diagramas Mermaid salen como código y las marcas ✅ ⏳ ≥ ↔ y los círculos de colores del texto no se ven, porque su fuente no las trae. Las razones y las alternativas están en [D33](DECISIONS.md#d33).
 
 ## 3. `verificar.py`
 
