@@ -137,6 +137,7 @@ logs/          Logs de operación, un fichero por día; se crea al arrancar y Gi
 | [docs/DESIGN.md](docs/DESIGN.md) | Diseño del código: análisis, clases y programación orientada a objetos |
 | [docs/DECISIONS.md](docs/DECISIONS.md) | Registro de las decisiones de diseño, con su motivo |
 | [docs/TESTING.md](docs/TESTING.md) | Cómo se prueba el proyecto: TDD, niveles de prueba, ejecución y mutaciones |
+| [docs/AUTOEVALUACION.md](docs/AUTOEVALUACION.md) | Autoevaluación frente a la rúbrica: veredicto y evidencia de cada criterio, entorno y fuentes |
 | [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | Flujo de trabajo: ramas, PR, commits y releases |
 | [docs/TOOLS.md](docs/TOOLS.md) | Herramientas adicionales: el tablero, el generador de la memoria técnica y `verificar.py` |
 | [docs/project_backlog.xlsx](docs/project_backlog.xlsx) | Backlog con historias de usuario, fases y avance |
