@@ -540,4 +540,31 @@ La lista completa de limitaciones está en [ARCHITECTURE.md](ARCHITECTURE.md#10-
 | **Doble de prueba** | Sustituto de una dependencia real para probar sin efectos (`FakeClock`) |
 | **Cohesión y acoplamiento** | Cuánto encaja lo que hay dentro de una clase y cuánto depende de otras |
 
+## 10. Recursos de Python que usa el código
+
+Una guía para leer el código: qué recursos del lenguaje aparecen y dónde verlos.
+
+| Recurso | Dónde se ve | Para qué |
+|---|---|---|
+| **Tipos de datos**: `Decimal`, `datetime` con zona horaria, `Enum` y `dataclass(frozen=True)` | [`core/tariff.py`](../src/taximetro/core/tariff.py), [`core/trip.py`](../src/taximetro/core/trip.py), [`core/trip_service.py`](../src/taximetro/core/trip_service.py) | Dinero exacto, fechas sin ambigüedad, estados cerrados y valores inmutables. `Trip.state` admite que aún no haya estado (tipo opcional) |
+| **Colecciones tipadas**: diccionarios, listas y tuplas | La tabla de comandos `dict[str, Callable[[], None]]` y `dict[type[TaximetroError], str]` en [`ui/cli/app.py`](../src/taximetro/ui/cli/app.py); `list[Trip]` en el repositorio; `tuple[str, ...]` en `Application` | Elegir la acción por nombre sin una cadena de `if`, traducir errores a mensajes y devolver resultados que no se modifican |
+| **Genéricos de la biblioteca estándar**: `Callable`, `Sequence`, `Mapping` y `Protocol` | [`core/ports.py`](../src/taximetro/core/ports.py) y las firmas de `Cli` | Describir qué se recibe sin atarlo a una clase concreta. No se definen genéricos propios con `TypeVar`, que no hacen falta en este proyecto |
+| **Bucles** | El `while` con `break` y `continue` de `Cli.run`, y el `for` que imprime las notas de arranque | Mantener la consola esperando comandos hasta `salir` |
+| **Condicionales** | Las cláusulas de guarda de `Trip._close_segment`: carrera terminada, sin iniciar o con el tiempo retrocedido | Proteger los invariantes de la entidad antes de calcular |
+| **Excepciones** | `try/except` en `TripService.finish` y `_log`; `raise … from error` en los repositorios | Que un fallo del disco o del registro nunca esconda el importe ([D17](DECISIONS.md#d17), [D22](DECISIONS.md#d22)) |
+| **Comprensiones y generadores** | `[trip for trip in … if …]` en `JsonTripRepository.list_finished` y `sum(… for …)` en `DaySummary.total` | Filtrar y sumar sin variables auxiliares |
+| **Legibilidad** | Anotaciones de tipo en las funciones, docstrings, nombres descriptivos en `snake_case`, funciones cortas y cabecera de dos líneas en cada fichero | Que el código se lea solo. Lo comprueban Ruff y [`tests/test_conventions.py`](../tests/test_conventions.py) ([TESTING.md](TESTING.md#7-convenciones-de-los-tests)) |
+
+La descomposición del problema en pasos (del enunciado a las clases) está en el apartado [2](#2-del-enunciado-a-las-clases) y el recorrido entrada, proceso y salida de una carrera, en el apartado [5](#5-cómo-colaboran-los-objetos).
+
+## 11. Referencias
+
+Documentación oficial, en inglés, en la que se apoya el diseño de las clases.
+
+| Fuente | Qué se aplicó |
+|---|---|
+| [Python: `decimal`](https://docs.python.org/3/library/decimal.html) | Importes en `Decimal` y redondeo medio hacia arriba al final, sin errores de coma flotante ([D3](DECISIONS.md#d3)) |
+| [Python: `dataclasses`](https://docs.python.org/3/library/dataclasses.html) | Objetos valor inmutables con `frozen=True`: `Tariff`, `TripStatus`, `DaySummary` y `Settings` |
+| [Python: `typing.Protocol`](https://docs.python.org/3/library/typing.html#typing.Protocol) | Los contratos de `core/ports.py`, sin herencia ([D10](DECISIONS.md#d10)) |
+
 Para seguir leyendo: [ARCHITECTURE.md](ARCHITECTURE.md) (qué hay y cómo encaja), [DECISIONS.md](DECISIONS.md) (por qué) y [TESTING.md](TESTING.md) (cómo se prueba).

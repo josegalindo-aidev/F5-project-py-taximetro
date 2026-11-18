@@ -371,7 +371,7 @@ El proyecto se desarrolla con **TDD**: primero el test en rojo, luego el código
 |---|---|
 | Cabecera de cada fichero `.py` | Dos líneas al principio: `# Proyecto: py-taximetro` y `# fuente: <ruta desde la raíz>` (por ejemplo, `src/taximetro/core/trip.py`). Los ficheros vacíos, como los `__init__.py`, no la llevan. La regla se comprueba en `tests/test_conventions.py`. |
 | Versión | La versión vive solo en `pyproject.toml`. El criterio de versionado y el estado de las versiones publicadas se documentan únicamente en el [README](../README.md#versionado); no se repiten en ningún otro fichero. |
-| Documentación | `README.md` (entrada del repositorio: instalación, arranque y enlaces), `docs/USAGE.md` (manual de uso), `docs/ARCHITECTURE.md` (este documento), `docs/DESIGN.md` (diseño de las clases y de la POO), `docs/DECISIONS.md` (registro de decisiones de diseño), `docs/TESTING.md` (cómo se prueba) y `docs/CONTRIBUTING.md` (flujo de trabajo). El README resume y enlaza; el detalle vive en `docs/`, y el README es el único documento de la raíz. Los documentos `.md` llevan el **nombre en mayúsculas** (`USAGE.md`, `ARCHITECTURE.md`…) para distinguirlos del código y de los tests, que van en minúsculas. |
+| Documentación | `README.md` (entrada del repositorio: instalación, arranque y enlaces), `docs/USAGE.md` (manual de uso), `docs/ARCHITECTURE.md` (este documento), `docs/DESIGN.md` (diseño de las clases y de la POO), `docs/DECISIONS.md` (registro de decisiones de diseño), `docs/TESTING.md` (cómo se prueba) y `docs/AUTOEVALUACION.md` (autoevaluación frente a la rúbrica) y `docs/CONTRIBUTING.md` (flujo de trabajo). El README resume y enlaza; el detalle vive en `docs/`, y el README es el único documento de la raíz. Los documentos `.md` llevan el **nombre en mayúsculas** (`USAGE.md`, `ARCHITECTURE.md`…) para distinguirlos del código y de los tests, que van en minúsculas. |
 | Commits | Conventional Commits (`feat`, `fix`, `test`, `refactor`, `docs`, `chore`) con referencia al issue (`Refs #n`) |
 | Ramas y PR | Una rama de release por fase y una rama por funcionalidad; `main` solo avanza tras la demo. Reglas completas en [CONTRIBUTING.md](CONTRIBUTING.md). |
 | Seguimiento | Tablero GitHub Projects «TTX-247 Taxímetro» (campos Fase, Tipo, MoSCoW, Estimate y Status) y backlog en `docs/project_backlog.xlsx` |
@@ -451,3 +451,11 @@ python scripts/verificar.py --lint
 | L9 | **Un fallo al escribir el log durante la jornada se ignora en silencio**: el taxista cobra, pero el responsable no se entera de que faltan eventos. | Valorar un aviso único por sesión. |
 | L10 | **Los logs no rotan**: hay un fichero por día y se acumulan; archivarlos o borrarlos es tarea del responsable. | Suficiente para el prototipo; con volumen real, rotación o retención. |
 
+## 11. Referencias
+
+Documentación oficial de Python, en inglés, en la que se apoya la infraestructura.
+
+| Fuente | Qué se aplicó |
+|---|---|
+| [Python: `pathlib`](https://docs.python.org/3/library/pathlib.html) | Rutas de tarifas, datos y logs en `Settings`, y escritura atómica del historial ([D16](DECISIONS.md#d16)) |
+| [Python: `tomllib`](https://docs.python.org/3/library/tomllib.html) | Lectura de `config/rates.toml` en el cargador de tarifas ([D7](DECISIONS.md#d7)) |
