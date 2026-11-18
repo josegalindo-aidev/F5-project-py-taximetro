@@ -12,6 +12,7 @@ from scripts.build_memoria import (
     build,
     clean_document,
     convert_anchors,
+    extract_diagrams,
     pandoc_command,
     parse_args,
     pdf_name,
@@ -275,3 +276,47 @@ def test_el_codigo_usa_una_fuente_con_los_trazos_de_los_arboles_de_carpetas():
 
 def test_los_identificadores_de_los_titulos_son_los_de_github_para_que_los_enlaces_funcionen():
     assert "--from=markdown+gfm_auto_identifiers" in pandoc_command("a.md", "a.pdf")
+
+
+FENCE = "`" * 3
+
+
+def mermaid_block(source: str) -> str:
+    return f"{FENCE}mermaid\n{source}\n{FENCE}\n"
+
+
+def test_un_bloque_mermaid_se_sustituye_por_una_imagen_numerada():
+    text = "Antes.\n\n" + mermaid_block("flowchart LR\n    A --> B") + "\nDespués.\n"
+
+    result, _ = extract_diagrams(text)
+
+    assert result == "Antes.\n\n![Diagrama 1](diagramas/diagrama-1.pdf)\n\nDespués.\n"
+
+
+def test_devuelve_el_texto_de_cada_diagrama_sin_las_vallas():
+    first = mermaid_block("flowchart LR\n    A --> B")
+    second = mermaid_block("classDiagram\n    class X")
+    text = first + "\n" + second
+
+    _, sources = extract_diagrams(text)
+
+    assert sources == ["flowchart LR\n    A --> B", "classDiagram\n    class X"]
+
+
+def test_numera_los_diagramas_en_el_orden_en_que_aparecen():
+    text = mermaid_block("a") + "\n" + mermaid_block("b") + "\n" + mermaid_block("c")
+
+    result, _ = extract_diagrams(text)
+
+    positions = [result.index(f"diagrama-{n}.pdf") for n in (1, 2, 3)]
+    assert positions == sorted(positions)
+
+
+def test_no_toca_los_demas_bloques_de_codigo():
+    text = f"{FENCE}bash\npython scripts/verificar.py\n{FENCE}\n"
+
+    assert extract_diagrams(text) == (text, [])
+
+
+def test_un_texto_sin_diagramas_no_cambia():
+    assert extract_diagrams("# Título\n\nTexto.\n") == ("# Título\n\nTexto.\n", [])
