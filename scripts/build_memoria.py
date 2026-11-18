@@ -121,22 +121,58 @@ def pandoc_command(source: str, target: str) -> list[str]:
 Runner = Callable[[list[str]], int]
 
 
+def render_diagrams(diagrams: list[str], out_dir: Path, runner: Runner, mmdc: str) -> int:
+    """Escribe cada diagrama y lo renderiza a PDF; devuelve el primer código distinto de cero."""
+    folder = out_dir / DIAGRAMS_DIR
+    folder.mkdir(parents=True, exist_ok=True)
+    chrome = folder / "chrome.json"
+    chrome.write_text(CHROME_CONFIG, encoding="utf-8")
+    for number, text in enumerate(diagrams, start=1):
+        source = folder / f"diagrama-{number}.mmd"
+        source.write_text(text, encoding="utf-8")
+        target = folder / f"diagrama-{number}.pdf"
+        code = runner([mmdc, *mermaid_command(str(source), str(target), str(chrome))[1:]])
+        if code != 0:
+            return code
+    return 0
+
+
 def build(
     root: Path,
     out_dir: Path,
     runner: Runner,
     pandoc: str | None,
     output: Callable[[str], None] = print,
+    mmdc: str | None = None,
 ) -> int:
-    """Escribe el Markdown ensamblado y, si hay Pandoc, lo convierte en PDF."""
+    """Escribe el Markdown ensamblado y, si hay Pandoc, lo convierte en PDF.
+
+    Con mmdc, los diagramas Mermaid se renderizan a PDF y se enlazan como imágenes; sin él
+    se quedan como código.
+    """
     version = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))["project"][
         "version"
     ]
     texts = {name: (root / "docs" / name).read_text(encoding="utf-8") for name in DOCUMENTS}
     out_dir.mkdir(parents=True, exist_ok=True)
     source = out_dir / "memoria.md"
-    source.write_text(assemble(texts, version), encoding="utf-8")
+    markdown = assemble(texts, version)
+    with_images, diagrams = extract_diagrams(markdown)
+    if mmdc is not None:
+        markdown = with_images
+    elif diagrams:
+        output(
+            f"[Memoria] AVISO: mmdc no está instalado, {len(diagrams)} diagramas Mermaid "
+            "salen como código (la CI los renderiza)."
+        )
+    source.write_text(markdown, encoding="utf-8")
     output(f"[Memoria] Markdown ensamblado: {source}")
+
+    if mmdc is not None:
+        code = render_diagrams(diagrams, out_dir, runner, mmdc)
+        if code != 0:
+            output(f"[Memoria] FALLO: mmdc terminó con el código {code}")
+            return code
 
     if pandoc is None:
         output("[Memoria] AVISO: pandoc no está instalado, no se genera el PDF (lo hace la CI).")
@@ -169,7 +205,7 @@ def launch(command: list[str]) -> int:
 def main(argv: Sequence[str] | None = None) -> int:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     out_dir = parse_args(sys.argv[1:] if argv is None else argv)
-    return build(ROOT, ROOT / out_dir, launch, shutil.which("pandoc"))
+    return build(ROOT, ROOT / out_dir, launch, shutil.which("pandoc"), mmdc=shutil.which("mmdc"))
 
 
 if __name__ == "__main__":

@@ -351,3 +351,96 @@ def test_pandoc_busca_las_imagenes_junto_al_markdown_ensamblado():
     command = pandoc_command("salida/memoria.md", "salida/memoria.pdf")
 
     assert f"--resource-path={Path('salida')}" in command
+
+
+def project_with_diagrams(root):
+    make_project(root)
+    architecture = root / "docs" / "ARCHITECTURE.md"
+    architecture.write_text(
+        architecture.read_text(encoding="utf-8")
+        + "\n"
+        + mermaid_block("flowchart LR\n    A --> B")
+        + "\n"
+        + mermaid_block("classDiagram\n    class X"),
+        encoding="utf-8",
+    )
+
+
+def run_build(root, runner, mmdc="mmdc", pandoc="pandoc", lines=None):
+    output = (lambda _: None) if lines is None else lines.append
+    return build(root, root / "out", runner, pandoc=pandoc, mmdc=mmdc, output=output)
+
+
+def test_con_mmdc_escribe_cada_diagrama_en_su_fichero(tmp_path):
+    project_with_diagrams(tmp_path)
+
+    run_build(tmp_path, FakeRunner())
+
+    folder = tmp_path / "out" / "diagramas"
+    assert (folder / "diagrama-1.mmd").read_text(encoding="utf-8") == "flowchart LR\n    A --> B"
+    assert (folder / "diagrama-2.mmd").read_text(encoding="utf-8") == "classDiagram\n    class X"
+
+
+def test_con_mmdc_el_markdown_enlaza_las_imagenes_en_lugar_de_el_codigo(tmp_path):
+    project_with_diagrams(tmp_path)
+
+    run_build(tmp_path, FakeRunner())
+
+    memoria = (tmp_path / "out" / "memoria.md").read_text(encoding="utf-8")
+    assert "![Diagrama 1](diagramas/diagrama-1.pdf)" in memoria
+    assert "![Diagrama 2](diagramas/diagrama-2.pdf)" in memoria
+    assert f"{FENCE}mermaid" not in memoria
+
+
+def test_con_mmdc_renderiza_los_diagramas_antes_de_lanzar_pandoc(tmp_path):
+    project_with_diagrams(tmp_path)
+    runner = FakeRunner()
+
+    run_build(tmp_path, runner, mmdc="/usr/bin/mmdc")
+
+    tools = [command[0] for command in runner.commands]
+    assert tools == ["/usr/bin/mmdc", "/usr/bin/mmdc", "pandoc"]
+    assert runner.commands[0][runner.commands[0].index("-o") + 1].endswith("diagrama-1.pdf")
+
+
+def test_con_mmdc_deja_la_configuracion_de_chrome_junto_a_los_diagramas(tmp_path):
+    project_with_diagrams(tmp_path)
+    runner = FakeRunner()
+
+    run_build(tmp_path, runner)
+
+    config = runner.commands[0][runner.commands[0].index("-p") + 1]
+    assert json.loads(Path(config).read_text(encoding="utf-8")) == json.loads(CHROME_CONFIG)
+
+
+def test_sin_mmdc_deja_los_diagramas_como_codigo_y_avisa(tmp_path):
+    project_with_diagrams(tmp_path)
+    runner = FakeRunner()
+    lines = []
+
+    code = run_build(tmp_path, runner, mmdc=None, lines=lines)
+
+    memoria = (tmp_path / "out" / "memoria.md").read_text(encoding="utf-8")
+    assert code == 0
+    assert f"{FENCE}mermaid" in memoria
+    assert [command[0] for command in runner.commands] == ["pandoc"]
+    assert any("mmdc" in line and "2" in line for line in lines)
+
+
+def test_sin_diagramas_no_avisa_de_mmdc(tmp_path):
+    make_project(tmp_path)
+    lines = []
+
+    run_build(tmp_path, FakeRunner(), mmdc=None, lines=lines)
+
+    assert not any("mmdc" in line for line in lines)
+
+
+def test_si_mmdc_falla_devuelve_su_codigo_y_no_lanza_pandoc(tmp_path):
+    project_with_diagrams(tmp_path)
+    runner = FakeRunner(code=4)
+
+    code = run_build(tmp_path, runner)
+
+    assert code == 4
+    assert [command[0] for command in runner.commands] == ["mmdc"]
