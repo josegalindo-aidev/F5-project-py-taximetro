@@ -62,6 +62,7 @@ El programa muestra las instrucciones al arrancar y espera comandos:
 | `mover` | El taxi está en movimiento |
 | `estado` | Muestra el estado y el importe actual |
 | `finalizar` | Termina la carrera y muestra el total |
+| `historico [AAAA-MM-DD]` | Lista las carreras finalizadas de hoy o del día indicado, con su hora, su importe y el total |
 | `ayuda` | Repite las instrucciones |
 | `salir` | Cierra el programa |
 
