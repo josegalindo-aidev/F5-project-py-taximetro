@@ -17,7 +17,7 @@ Proyecto del bootcamp de Factoría F5, desarrollado con **TDD** y una arquitectu
 |---|---|---|
 | **1 · MVP CLI** | Iniciar, cambiar de estado y finalizar carreras desde la consola; encadenar carreras | ✅ Implementada |
 | 2 · Observabilidad y persistencia | Logs de operación, historial en disco, histórico del día, tarifas en fichero y umbral de cobertura | ✅ Implementada |
-| 3 · Arquitectura y UI | Acceso con contraseña e interfaz gráfica para tablet | ⏳ Planificada |
+| 3 · Arquitectura y UI | Arquitectura en capas y script de verificación (hechos); acceso con contraseña e interfaz gráfica para tablet (pendientes) | 🚧 En desarrollo |
 | 4 · Producción | Base de datos, API REST, panel web y despliegue con un comando | ⏳ Planificada |
 
 ## Requisitos
@@ -164,10 +164,18 @@ Se sigue el [versionado semántico](https://semver.org/lang/es/) (`MAJOR.MINOR.P
 |---|---|---|
 | 1 · MVP CLI | `0.1.0` | ✅ [Publicada](https://github.com/josegalindo-aidev/F5-project-py-taximetro/releases/tag/v0.1.0) |
 | 2 · Observabilidad y persistencia | `0.2.0` | ✅ [Publicada](https://github.com/josegalindo-aidev/F5-project-py-taximetro/releases/tag/v0.2.0) |
-| 3 · Arquitectura y UI | `0.3.0` | ⏳ Planificada |
+| 3 · Arquitectura y UI | `0.3.0` | 🚧 En desarrollo: la rama `release/0.3.0` lleva `0.3.0.dev0`; aún sin etiqueta ni release |
 | 4 · Producción | `1.0.0` | ⏳ Planificada |
 
 Al cerrar una fase se sube `version` en `pyproject.toml` dentro de su PR y se crea la etiqueta `vX.Y.Z` con su release en GitHub.
+
+**Versiones intermedias.** Mientras una fase está en curso, la rama de release lleva `X.Y.Z.dev0` (hoy, `0.3.0.dev0`), de modo que no se confunde ni con la fase anterior ni con la fase cerrada. Para mostrar el avance se puede publicar una **pre-release** `X.Y.ZaN` con la etiqueta `vX.Y.Z-alpha.N` sobre la rama de release, sin tocar `main`, que sigue en la última fase entregada. El número del `pyproject.toml` del commit etiquetado y el de la etiqueta deben decir lo mismo. El orden de las versiones es:
+
+```
+0.2.0  <  0.3.0.dev0  <  0.3.0a1  <  0.3.0a2.dev0  <  0.3.0a2  <  0.3.0
+```
+
+Tras publicar una pre-release el desarrollo continúa en `X.Y.Za(N+1).dev0`, y no en `X.Y.Z.dev1`, porque ese número es anterior y el orden retrocedería. El procedimiento está en [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md#versiones-intermedias-desarrollo-y-pre-release).
 
 ## Flujo de trabajo
 
