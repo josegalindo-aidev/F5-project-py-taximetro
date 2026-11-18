@@ -156,10 +156,11 @@ Se sigue el [versionado semántico](https://semver.org/lang/es/) (`MAJOR.MINOR.P
 |---|---|---|
 | 1 · MVP CLI | `0.1.0` | ✅ [Publicada](https://github.com/josegalindo-aidev/F5-project-py-taximetro/releases/tag/v0.1.0) |
 | 2 · Observabilidad y persistencia | `0.2.0` | ✅ [Publicada](https://github.com/josegalindo-aidev/F5-project-py-taximetro/releases/tag/v0.2.0) |
+| 2 · Observabilidad y persistencia (corrección) | `0.2.1` | ✅ [Publicada](https://github.com/josegalindo-aidev/F5-project-py-taximetro/releases/tag/v0.2.1) |
 | 3 · Arquitectura y UI | `0.3.0` | ⏳ Planificada |
 | 4 · Producción | `1.0.0` | ⏳ Planificada |
 
-Al cerrar una fase se sube `version` en `pyproject.toml` dentro de su PR y se crea la etiqueta `vX.Y.Z` con su release en GitHub.
+Al cerrar una fase se sube `version` en `pyproject.toml` dentro de su PR y se crea la etiqueta `vX.Y.Z` con su release en GitHub. Una versión de corrección (`PATCH`) se publica sobre `main` y se trae de vuelta a la rama de release en curso.
 
 ## Flujo de trabajo
 
