@@ -1,0 +1,48 @@
+name: Memoria técnica
+
+# Genera el PDF de la memoria técnica a partir de los documentos de docs/.
+# El PDF es un artefacto de la ejecución: no se guarda en el repositorio.
+on:
+  pull_request:
+    paths:
+      - "docs/**"
+      - "scripts/build_memoria.py"
+      - "pyproject.toml"
+      - ".github/workflows/memoria.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: memoria-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pdf:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar Pandoc y XeLaTeX
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            pandoc texlive-xetex texlive-latex-recommended \
+            texlive-fonts-recommended texlive-lang-spanish lmodern
+
+      - name: Generar la memoria
+        run: python scripts/build_memoria.py
+
+      - name: Guardar el PDF
+        uses: actions/upload-artifact@v4
+        with:
+          name: memoria-pdf
+          path: build/memoria/taximetro-memoria-*.pdf
+          if-no-files-found: error
+          retention-days: 14
