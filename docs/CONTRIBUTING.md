@@ -132,3 +132,29 @@ El criterio y el estado de las versiones están **solo** en el [README](../READM
 ## 10. Cambiar las reglas del repositorio
 
 Los rulesets se editan en *Settings → Rules → Rulesets*. Si se cambian, hay que actualizar el apartado 2 de esta guía en la misma PR.
+
+## 11. Entorno de desarrollo
+
+Con qué se desarrolla el proyecto. La instalación paso a paso y las herramientas de desarrollo (`pytest`, `pytest-cov`, `ruff` y `hatchling`) están en el [README](../README.md#instalación-y-arranque).
+
+| Herramienta | Para qué se usa |
+|---|---|
+| **Python** y **Git** | El lenguaje y el control de versiones. La versión de Python exigida figura en el [README](../README.md#requisitos) |
+| **GitHub** | Repositorio, pull requests, *rulesets* de protección, Releases y el tablero de seguimiento (Projects) |
+| **Visual Studio Code** | Editor del proyecto |
+| Extensión **Python** (con Pylance, Python Debugger y Python Environments) | Edición con análisis de tipos, depuración y gestión del entorno virtual |
+| Extensión **GitLens** | Historial y autoría de líneas y commits dentro del editor |
+| Extensión **Markdown All in One** | Edición y vista previa de los documentos de `docs/` |
+| Extensión **GitHub Repositories** | Abrir y navegar repositorios de GitHub desde el editor |
+
+Ruff y pytest se ejecutan desde la línea de comandos (véanse las órdenes del [README](../README.md#pruebas-y-calidad)) y no como extensiones del editor.
+
+## 12. Referencias
+
+Documentación y estándares, en inglés, en los que se apoya el flujo de trabajo.
+
+| Fuente | Qué se aplicó |
+|---|---|
+| [GitHub Docs](https://docs.github.com/) | *Rulesets* de ramas y etiquetas, campos y vistas de Projects y la API para fusionar PR (apartados 2, 3 y 4) |
+| [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) | Formato de los mensajes de commit (apartado 7) |
+| [Semantic Versioning](https://semver.org/) | Criterio de numeración de las versiones (apartado 9) |

@@ -62,6 +62,7 @@ El programa muestra las instrucciones al arrancar y espera comandos:
 | `mover` | El taxi está en movimiento |
 | `estado` | Muestra el estado y el importe actual |
 | `finalizar` | Termina la carrera y muestra el total |
+| `historico [AAAA-MM-DD]` | Lista las carreras finalizadas de hoy o del día indicado, con su hora, su importe y el total |
 | `ayuda` | Repite las instrucciones |
 | `salir` | Cierra el programa |
 
@@ -125,6 +126,7 @@ logs/          Logs de operación, un fichero por día; se crea al arrancar y Gi
 | [docs/USAGE.md](docs/USAGE.md) | Manual de uso del taxímetro |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Arquitectura, módulos y decisiones de diseño |
 | [docs/TESTING.md](docs/TESTING.md) | Cómo se prueba el proyecto: TDD, niveles de prueba, ejecución y mutaciones |
+| [docs/AUTOEVALUACION.md](docs/AUTOEVALUACION.md) | Autoevaluación frente a la rúbrica: veredicto y enlaces a la evidencia de cada criterio |
 | [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | Flujo de trabajo: ramas, PR, commits y releases |
 | [docs/project_backlog.xlsx](docs/project_backlog.xlsx) | Backlog con historias de usuario, fases y avance |
 
@@ -154,10 +156,11 @@ Se sigue el [versionado semántico](https://semver.org/lang/es/) (`MAJOR.MINOR.P
 |---|---|---|
 | 1 · MVP CLI | `0.1.0` | ✅ [Publicada](https://github.com/josegalindo-aidev/F5-project-py-taximetro/releases/tag/v0.1.0) |
 | 2 · Observabilidad y persistencia | `0.2.0` | ✅ [Publicada](https://github.com/josegalindo-aidev/F5-project-py-taximetro/releases/tag/v0.2.0) |
+| 2 · Observabilidad y persistencia (corrección) | `0.2.1` | ✅ [Publicada](https://github.com/josegalindo-aidev/F5-project-py-taximetro/releases/tag/v0.2.1) |
 | 3 · Arquitectura y UI | `0.3.0` | ⏳ Planificada |
 | 4 · Producción | `1.0.0` | ⏳ Planificada |
 
-Al cerrar una fase se sube `version` en `pyproject.toml` dentro de su PR y se crea la etiqueta `vX.Y.Z` con su release en GitHub.
+Al cerrar una fase se sube `version` en `pyproject.toml` dentro de su PR y se crea la etiqueta `vX.Y.Z` con su release en GitHub. Una versión de corrección (`PATCH`) se publica sobre `main` y se trae de vuelta a la rama de release en curso.
 
 ## Flujo de trabajo
 

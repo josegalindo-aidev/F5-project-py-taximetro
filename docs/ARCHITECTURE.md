@@ -481,7 +481,7 @@ El proyecto se desarrolla con **TDD**: primero el test en rojo, luego el código
 |---|---|
 | Cabecera de cada fichero `.py` | Dos líneas al principio: `# Proyecto: py-taximetro` y `# fuente: <ruta desde la raíz>` (por ejemplo, `src/taximetro/core/trip.py`). Los ficheros vacíos, como los `__init__.py`, no la llevan. La regla se comprueba en `tests/test_conventions.py`. |
 | Versión | La versión vive solo en `pyproject.toml`. El criterio de versionado y el estado de las versiones publicadas se documentan únicamente en el [README](../README.md#versionado); no se repiten en ningún otro fichero. |
-| Documentación | `README.md` (entrada del repositorio: instalación, arranque y enlaces), `docs/USAGE.md` (manual de uso), `docs/ARCHITECTURE.md` (este documento), `docs/TESTING.md` (cómo se prueba) y `docs/CONTRIBUTING.md` (flujo de trabajo). El README resume y enlaza; el detalle vive en `docs/`, y el README es el único documento de la raíz. Los documentos `.md` llevan el **nombre en mayúsculas** (`USAGE.md`, `ARCHITECTURE.md`…) para distinguirlos del código y de los tests, que van en minúsculas. |
+| Documentación | `README.md` (entrada del repositorio: instalación, arranque y enlaces), `docs/USAGE.md` (manual de uso), `docs/ARCHITECTURE.md` (este documento), `docs/TESTING.md` (cómo se prueba) y `docs/AUTOEVALUACION.md` (autoevaluación frente a la rúbrica) y `docs/CONTRIBUTING.md` (flujo de trabajo). El README resume y enlaza; el detalle vive en `docs/`, y el README es el único documento de la raíz. Los documentos `.md` llevan el **nombre en mayúsculas** (`USAGE.md`, `ARCHITECTURE.md`…) para distinguirlos del código y de los tests, que van en minúsculas. |
 | Commits | Conventional Commits (`feat`, `fix`, `test`, `refactor`, `docs`, `chore`) con referencia al issue (`Refs #n`) |
 | Ramas y PR | Una rama de release por fase y una rama por funcionalidad; `main` solo avanza tras la demo. Reglas completas en [CONTRIBUTING.md](CONTRIBUTING.md). |
 | Seguimiento | Tablero GitHub Projects «TTX-247 Taxímetro» (campos Fase, Tipo, MoSCoW, Estimate y Status) y backlog en `docs/project_backlog.xlsx` |
@@ -555,3 +555,31 @@ python -m ruff check src tests
 | L9 | **Un fallo al escribir el log durante la jornada se ignora en silencio**: el taxista cobra, pero el responsable no se entera de que faltan eventos. | Valorar un aviso único por sesión. |
 | L10 | **Los logs no rotan**: hay un fichero por día y se acumulan; archivarlos o borrarlos es tarea del responsable. | Suficiente para el prototipo; con volumen real, rotación o retención. |
 
+## 11. Recursos de Python que usa el código
+
+Una guía para leer el código: qué recursos del lenguaje aparecen y dónde verlos.
+
+| Recurso | Dónde se ve | Para qué |
+|---|---|---|
+| **Tipos de datos**: `Decimal`, `datetime` con zona horaria, `Enum` y `dataclass(frozen=True)` | [`core/tariff.py`](../src/taximetro/core/tariff.py), [`core/trip.py`](../src/taximetro/core/trip.py), [`core/state.py`](../src/taximetro/core/state.py) | Dinero exacto, fechas sin ambigüedad, estados cerrados y una tarifa inmutable |
+| **Colecciones tipadas**: diccionarios, listas y tuplas | La tabla de comandos `dict[str, Callable[[], None]]` y `dict[type[TaximetroError], str]` en [`ui/cli/app.py`](../src/taximetro/ui/cli/app.py); `list[Trip]` en los repositorios; `tuple[str, ...]` en [`infra/tariff_loader.py`](../src/taximetro/infra/tariff_loader.py) | Elegir la acción por nombre sin una cadena de `if`, traducir errores a mensajes y devolver resultados |
+| **Genéricos de la biblioteca estándar**: `Callable`, `Sequence` y `Protocol` | [`core/ports.py`](../src/taximetro/core/ports.py) y las firmas de `Cli` | Describir qué se recibe sin atarlo a una clase concreta. No se definen genéricos propios con `TypeVar`, que no hacen falta en este proyecto |
+| **Bucles** | El `while` con `break` y `continue` de `Cli.run`, y el `for` con `enumerate` del histórico | Mantener la consola esperando comandos hasta `salir` y numerar las carreras |
+| **Condicionales** | Las cláusulas de guarda de `Trip._close_segment`: carrera terminada, sin iniciar o con el tiempo retrocedido | Proteger los invariantes de la entidad antes de calcular |
+| **Excepciones** | `try/except` en `TripService.finish` y `_log`; `raise … from error` en el cargador y los repositorios | Que un fallo del disco o del registro nunca esconda el importe |
+| **Comprensiones y generadores** | `[trip for trip in trips if …]` en `JsonTripRepository.list_finished` y `[rates[key] for key in keys]` en el cargador de tarifas | Filtrar y extraer valores sin variables auxiliares |
+| **Legibilidad** | Anotaciones de tipo en las funciones, docstrings, nombres descriptivos en `snake_case`, funciones cortas y cabecera de dos líneas en cada fichero | Que el código se lea solo. Lo comprueban Ruff y [`tests/test_conventions.py`](../tests/test_conventions.py) ([TESTING.md](TESTING.md#7-convenciones-de-los-tests)) |
+
+La descomposición del problema en pasos está en el [modelo de cálculo y las reglas de negocio](#41-modelo-de-cálculo) y en el [flujo de una carrera completa](#44-flujo-de-una-carrera-completa).
+
+## 12. Referencias
+
+Documentación oficial de Python, en inglés, en la que se apoya el código.
+
+| Fuente | Qué se aplicó |
+|---|---|
+| [Python: `decimal`](https://docs.python.org/3/library/decimal.html) | Importes en `Decimal` y redondeo medio hacia arriba al final, sin errores de coma flotante (decisión D3) |
+| [Python: `dataclasses`](https://docs.python.org/3/library/dataclasses.html) | La tarifa como objeto valor inmutable con `frozen=True` (`Tariff`) |
+| [Python: `typing.Protocol`](https://docs.python.org/3/library/typing.html#typing.Protocol) | Los contratos de `core/ports.py`, sin herencia (decisión D10) |
+| [Python: `pathlib`](https://docs.python.org/3/library/pathlib.html) | Rutas de tarifas, datos y logs, y escritura atómica del historial (decisión D16) |
+| [Python: `tomllib`](https://docs.python.org/3/library/tomllib.html) | Lectura de `config/rates.toml` en el cargador de tarifas (decisión D7) |
