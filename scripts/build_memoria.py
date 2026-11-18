@@ -32,6 +32,8 @@ _HEADER_COMMENT = re.compile(r"\A\s*<!--.*?-->\s*", re.DOTALL)
 _FIRST_TITLE = re.compile(r"^# (.+?)[ \t]*$", re.MULTILINE)
 _HTML_ANCHOR = re.compile(r'<a id="([^"]+)"></a>')
 _LINK = re.compile(r"\]\(([^)#\s]+)(#[^)\s]*)?\)")
+_MERMAID_BLOCK = re.compile(r"^```mermaid\n(.*?)\n```[ \t]*$", re.MULTILINE | re.DOTALL)
+DIAGRAMS_DIR = "diagramas"
 
 
 def clean_document(text: str, anchor: str) -> str:
@@ -56,6 +58,18 @@ def rewrite_links(text: str, anchors: dict[str, str]) -> str:
 def convert_anchors(text: str) -> str:
     """Convierte las anclas HTML en anclas de Pandoc, que el PDF sí conserva."""
     return _HTML_ANCHOR.sub(r"[]{#\1}", text)
+
+
+def extract_diagrams(text: str) -> tuple[str, list[str]]:
+    """Sustituye cada bloque Mermaid por una imagen numerada y devuelve sus textos."""
+    sources: list[str] = []
+
+    def replace(found: re.Match[str]) -> str:
+        sources.append(found[1])
+        number = len(sources)
+        return f"![Diagrama {number}]({DIAGRAMS_DIR}/diagrama-{number}.pdf)"
+
+    return _MERMAID_BLOCK.sub(replace, text), sources
 
 
 def assemble(texts: dict[str, str], version: str) -> str:
