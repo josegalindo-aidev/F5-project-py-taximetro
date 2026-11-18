@@ -2,7 +2,14 @@
 # fuente: tests/unit/test_build_memoria.py
 """Script de la memoria técnica: cómo se prepara cada documento antes de ensamblarlo."""
 
-from scripts.build_memoria import assemble, clean_document, convert_anchors, rewrite_links
+from scripts.build_memoria import (
+    assemble,
+    clean_document,
+    convert_anchors,
+    pandoc_command,
+    pdf_name,
+    rewrite_links,
+)
 
 HEADER = "<!--\nProyecto: py-taximetro\nfuente: docs/USAGE.md\n-->\n\n"
 
@@ -143,3 +150,25 @@ def test_ignora_los_documentos_que_no_forman_parte_de_la_memoria():
     texts = sample_texts() | {"OTRO.md": "# No debe salir\n"}
 
     assert "No debe salir" not in assemble(texts, "1.2.3")
+
+
+def test_el_pdf_se_llama_como_el_proyecto_la_memoria_y_la_version():
+    assert pdf_name("0.3.0a2.dev0") == "taximetro-memoria-0.3.0a2.dev0.pdf"
+
+
+def test_pandoc_convierte_el_markdown_ensamblado_en_el_pdf_indicado():
+    command = pandoc_command("memoria.md", "salida/memoria.pdf")
+
+    assert command[:2] == ["pandoc", "memoria.md"]
+    assert command[command.index("-o") + 1] == "salida/memoria.pdf"
+
+
+def test_pandoc_usa_xelatex_para_los_acentos_y_los_simbolos():
+    assert "--pdf-engine=xelatex" in pandoc_command("a.md", "a.pdf")
+
+
+def test_pandoc_genera_indice_y_numera_los_apartados():
+    command = pandoc_command("a.md", "a.pdf")
+
+    assert "--toc" in command
+    assert "--number-sections" in command
