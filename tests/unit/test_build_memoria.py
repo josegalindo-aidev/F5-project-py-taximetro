@@ -3,6 +3,7 @@
 """Script de la memoria técnica: cómo se prepara cada documento antes de ensamblarlo."""
 
 import json
+from datetime import date
 from pathlib import Path
 
 from scripts.build_memoria import (
@@ -450,3 +451,30 @@ def test_la_imagen_no_lleva_texto_alternativo_para_que_no_se_convierta_en_figura
     result, _ = extract_diagrams(mermaid_block("flowchart LR\n    A --> B"))
 
     assert result.startswith("![](")
+
+
+def test_la_portada_lleva_la_fecha_en_formato_dia_mes_anio():
+    memoria = assemble(sample_texts(), "1.2.3", today=date(2026, 1, 5))
+
+    assert 'date: "05/01/2026"' in memoria
+
+
+def test_la_portada_lleva_el_nombre_del_equipo():
+    memoria = assemble(sample_texts(), "1.2.3", team="Equipo Uno")
+
+    assert 'author: "Developer Team: Equipo Uno"' in memoria
+
+
+def test_sin_fecha_ni_equipo_la_portada_no_los_inventa():
+    memoria = assemble(sample_texts(), "1.2.3")
+
+    assert "date:" not in memoria
+    assert "author:" not in memoria
+
+
+def test_la_portada_sigue_siendo_un_bloque_de_metadatos_valido():
+    memoria = assemble(sample_texts(), "1.2.3", team="Equipo Uno", today=date(2026, 11, 18))
+
+    cover = memoria.split("---\n")[1]
+    assert cover.splitlines()[0].startswith("title:")
+    assert memoria.startswith("---\n") and memoria.count("---\n") >= 2
